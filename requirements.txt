@@ -1,0 +1,5 @@
+pip~=23.2.1
+pyrogram
+tgcrypto
+requests
+pyrogram
