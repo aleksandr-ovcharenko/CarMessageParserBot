@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 from collections import defaultdict
 
 from pyrogram import Client, filters
@@ -12,6 +13,8 @@ from utils import send_to_api
 
 user_sessions = {}
 
+logging.basicConfig(level=logging.DEBUG)
+
 app = Client("car_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 user_sessions = defaultdict(dict)
@@ -23,6 +26,7 @@ app = Client("car_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 async def handle_message(client: Client, message: Message):
     user_id = message.from_user.id
     print(f"[LOG] Message from {user_id}: {message.text or 'photo'}")
+    logging.info(f"[HANDLE_MESSAGE] From: {user_id} | Message: {message.text or 'photo'}")
 
     session = user_sessions[user_id]
 
@@ -36,6 +40,7 @@ async def handle_message(client: Client, message: Message):
 
             # ✅ Подождем немного, чтобы дождаться остальные фото
             print("[WAITING FOR FULL ALBUM...]")
+            logging.info(f"[ALBUM] Caption received. Waiting before processing...")
             await asyncio.sleep(1.5)
 
             await process_session(message, session)
@@ -45,12 +50,14 @@ async def handle_message(client: Client, message: Message):
     if message.photo:
         session.setdefault("images", [])
         session["images"].append(message.photo.file_id)
+        logging.info(f"[PHOTO] Single photo received")
         await message.reply("📷 Фото получено. Жду текстовое описание.")
         return
 
     # --- Если пришёл текст (отдельным сообщением)
     if message.text:
         session["caption"] = message.text
+        logging.info(f"[TEXT] Text-only message received. Proceeding to process_session()")
         await process_session(message, session)
         return
 
@@ -124,7 +131,6 @@ async def process_session(message: Message, session: dict):
             msg += f"• `{field}`\n"
 
     await message.reply(msg)  # только в нижнем регистре!
-
 
 
 app.run()

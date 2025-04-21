@@ -7,7 +7,9 @@ app = 'carmessageparserbot'
 primary_region = 'fra'
 
 [build]
-  builder = 'paketobuildpacks/builder:base'
+
+[deploy]
+strategy = 'rolling'
 
 [env]
   PORT = '8080'
