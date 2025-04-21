@@ -9,6 +9,12 @@ from config import ALLOWED_USERS
 from config import API_ID, API_HASH, BOT_TOKEN
 from parser import parse_car_text
 from utils import send_to_api
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(levelname)s] %(message)s'
+)
 
 user_sessions = defaultdict(dict)
 
@@ -123,9 +129,14 @@ async def process_session(message: Message, session: dict):
         await message.reply(msg)
 
     else:
-        print("[API ERROR]", response.status_code)
-        print("[API ERROR BODY]", response.text)
-        await message.reply("❌ Ошибка при отправке данных на API. Подробности см. в логе.")
+        logging.error("❌ Ошибка при отправке данных на API")
+    logging.info(f"[STATUS] {response.status_code}")
+    logging.info(f"[BODY] {response.text}")
+
+    if response.status_code >= 500:
+        await message.reply("❌ Сервер временно недоступен. Попробуйте позже.")
+    else:
+        await message.reply("❌ Не удалось отправить данные. Проверьте формат или попробуйте снова.")
 
 
 app.run()
