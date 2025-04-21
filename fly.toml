@@ -1,15 +1,15 @@
-# fly.toml app configuration file generated for carmessageparserbot on 2025-04-16T17:03:22+02:00
+# fly.toml app configuration file generated for carmessageparserbot-winter-pine-6160 on 2025-04-21T17:12:12+02:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'carmessageparserbot'
+app = 'carmessageparserbot-winter-pine-6160'
 primary_region = 'fra'
 
 [build]
 
 [deploy]
-strategy = 'rolling'
+  strategy = 'rolling'
 
 [env]
   PORT = '8080'
