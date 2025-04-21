@@ -10,10 +10,6 @@ from config import API_ID, API_HASH, BOT_TOKEN
 from parser import parse_car_text
 from utils import send_to_api
 
-user_sessions = {}
-
-app = Client("car_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
-
 user_sessions = defaultdict(dict)
 
 app = Client("car_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
