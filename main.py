@@ -92,38 +92,40 @@ async def process_session(message: Message, session: dict):
         except Exception:
             data = {}
 
-    parsed_fields = [k for k in car_data if k != "image_file_ids"]
-    failed_fields = failed_keys if failed_keys else []
+        parsed_fields = [k for k in car_data if k != "image_file_ids"]
+        failed_fields = failed_keys if failed_keys else []
 
-    msg = f"✅ Автомобиль успешно импортирован!\n"
-    msg += f"🆔 ID: `{data.get('car_id', '—')}`\n"
-    msg += f"🚘 {data.get('brand', '')} {data.get('model', '')} ({data.get('year', '')})\n"
-    msg += f"💰 Цена: {data.get('price', '—')}\n"
+        msg = f"✅ Автомобиль успешно импортирован!\n"
+        msg += f"🆔 ID: `{data.get('car_id', '—')}`\n"
+        msg += f"🚘 {data.get('brand', '')} {data.get('model', '')} ({data.get('year', '')})\n"
+        msg += f"💰 Цена: {data.get('price', '—')}\n"
 
-    if data.get("main_image"):
-        msg += f"🖼 Главное изображение готово ✅\n"
+        if data.get("main_image"):
+            msg += f"🖼 Главное изображение готово ✅\n"
 
-    msg += f"📸 Галерея: {data.get('gallery_images_count', 0)} фото\n"
+        msg += f"📸 Галерея: {data.get('gallery_images_count', 0)} фото\n"
 
-    # 🌐 Ссылки
-    if car_url := data.get("car_url"):
-        msg += f"\n🔗 Ссылка на сайт:\n{car_url}\n"
-    if admin_url := data.get("admin_edit_url"):
-        msg += f"\n🛠 Редактировать в админке:\n{admin_url}\n"
+        if car_url := data.get("car_url"):
+            msg += f"\n🔗 Ссылка на сайт:\n{car_url}\n"
+        if admin_url := data.get("admin_edit_url"):
+            msg += f"\n🛠 Редактировать в админке:\n{admin_url}\n"
 
-    # ✔️ Распознанные поля
-    if parsed_fields:
-        msg += "\n\n✔️ Распознаны поля:\n"
-        for field in parsed_fields:
-            msg += f"• `{field}`\n"
+        if parsed_fields:
+            msg += "\n\n✔️ Распознаны поля:\n"
+            for field in parsed_fields:
+                msg += f"• `{field}`\n"
 
-    # ⚠️ Не удалось распознать
-    if failed_fields:
-        msg += "\n⚠️ Не удалось распознать:\n"
-        for field in failed_fields:
-            msg += f"• `{field}`\n"
+        if failed_fields:
+            msg += "\n⚠️ Не удалось распознать:\n"
+            for field in failed_fields:
+                msg += f"• `{field}`\n"
 
-    await message.reply(msg)  # только в нижнем регистре!
+        await message.reply(msg)
+
+    else:
+        print("[API ERROR]", response.status_code)
+        print("[API ERROR BODY]", response.text)
+        await message.reply("❌ Ошибка при отправке данных на API. Подробности см. в логе.")
 
 
 app.run()
