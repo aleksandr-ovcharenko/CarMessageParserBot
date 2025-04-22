@@ -5,7 +5,7 @@ from collections import defaultdict
 from pyrogram import Client, filters
 from pyrogram.types import Message
 
-from config import ALLOWED_USERS
+from config import ALLOWED_USERS, API_TOKEN
 from config import API_ID, API_HASH, BOT_TOKEN
 from parser import parse_car_text
 from utils import send_to_api
@@ -89,6 +89,8 @@ async def process_session(message: Message, session: dict):
 
         print(f"[PHOTO {idx}] file_id: {fid}")
         print(f"           URL: {url}")
+
+    logging.info(f"[DEBUG] Using API token: {API_TOKEN}")
 
     response = send_to_api(car_data)
 
