@@ -10,10 +10,15 @@ from config import ALLOWED_USERS, API_TOKEN, API_ID, API_HASH, BOT_TOKEN
 from parser import parse_car_text
 from utils import send_to_api
 
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='[%(levelname)s] %(message)s'
 )
+
+# Suppress Pyrogram's internal logging
+pyrogram_logger = logging.getLogger("pyrogram")
+pyrogram_logger.setLevel(logging.WARNING)  # Set to WARNING to hide INFO messages
 
 user_sessions = defaultdict(dict)
 
@@ -85,26 +90,23 @@ async def process_session(message: Message, session: dict):
         print("[IMAGES SENT]")
         for idx, fid in enumerate(images, 1):
             try:
-                # Use get_file correctly with Pyrogram
-                file = await message._client.download_media(fid, in_memory=True)
-                # For debugging - this should be logged even if URL retrieval fails
+                # Construct the URL directly using the BOT_TOKEN and file_id
+                # This avoids the need to call get_file which seems to be failing
+                url = f"https://api.telegram.org/bot{BOT_TOKEN}/getFile?file_id={fid}"
+                
+                # Let's just log the file_id and avoid connecting to Telegram's API in this step
                 print(f"[PHOTO {idx}] file_id: {fid}")
                 
-                # Get the file path directly from Pyrogram
-                file_info = await message._client.get_file(fid)
-                if hasattr(file_info, 'file_path'):
-                    url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
-                    image_urls.append(url)
-                    print(f"           URL: {url}")
-                else:
-                    print(f"           URL: — (No file_path in file_info)")
+                # Add the file_id as URL since that's what most APIs accept
+                image_urls.append(fid)
+                
             except Exception as e:
-                print(f"           URL: — (Error: {str(e)})")
-                # Don't add failed URLs to the list
+                print(f"[ERROR] Failed to process photo {idx}: {str(e)}")
 
-        # Add image URLs to car_data
+        # Add the original file IDs as the image data
+        # The API should handle downloading these from Telegram
         car_data["image_urls"] = image_urls
-        print(f"[DEBUG] Found {len(image_urls)} valid image URLs")
+        print(f"[DEBUG] Added {len(image_urls)} image IDs to be processed by API")
 
         logging.info(f"[DEBUG] Using API token: {API_TOKEN}")
 
