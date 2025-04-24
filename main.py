@@ -76,18 +76,35 @@ async def process_session(message: Message, session: dict):
 
         print("[REQUEST DATA]", json.dumps(car_data, ensure_ascii=False, indent=2))
 
+        # Add image file_ids to car_data
         car_data["image_file_ids"] = images
+        
+        # Create a list to store image URLs
+        image_urls = []
 
         print("[IMAGES SENT]")
         for idx, fid in enumerate(images, 1):
             try:
-                file = await message._client.get_file(fid)
-                url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file.file_path}"
-            except Exception:
-                url = "—"
+                # Use get_file correctly with Pyrogram
+                file = await message._client.download_media(fid, in_memory=True)
+                # For debugging - this should be logged even if URL retrieval fails
+                print(f"[PHOTO {idx}] file_id: {fid}")
+                
+                # Get the file path directly from Pyrogram
+                file_info = await message._client.get_file(fid)
+                if hasattr(file_info, 'file_path'):
+                    url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
+                    image_urls.append(url)
+                    print(f"           URL: {url}")
+                else:
+                    print(f"           URL: — (No file_path in file_info)")
+            except Exception as e:
+                print(f"           URL: — (Error: {str(e)})")
+                # Don't add failed URLs to the list
 
-            print(f"[PHOTO {idx}] file_id: {fid}")
-            print(f"           URL: {url}")
+        # Add image URLs to car_data
+        car_data["image_urls"] = image_urls
+        print(f"[DEBUG] Found {len(image_urls)} valid image URLs")
 
         logging.info(f"[DEBUG] Using API token: {API_TOKEN}")
 
