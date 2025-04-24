@@ -123,7 +123,16 @@ async def process_session(message: Message, session: dict):
 
             msg = f"✅ Автомобиль успешно импортирован!\n"
             msg += f"🆔 ID: `{data.get('car_id', '—')}`\n"
-            msg += f"🚘 {data.get('brand', '')} {data.get('model', '')} ({data.get('year', '')})\n"
+            
+            # Format the car brand, model and year properly
+            brand = data.get('brand', '')
+            model = data.get('model', '')
+            year = data.get('year')
+            
+            # Only include year in parentheses if it's a valid non-zero value
+            year_display = f" ({year})" if year and year != 0 and year != "0" and year != "" else ""
+            msg += f"🚘 {brand} {model}{year_display}\n"
+            
             msg += f"💰 Цена: {data.get('price', '—')}\n"
 
             if data.get("main_image"):
