@@ -125,5 +125,52 @@ def test_emoji_format():
     
     print("\nTesting completed!")
 
+def test_lynk_format():
+    """
+    Специальный тест для формата Lynk & Co
+    """
+    test_message = """Lynk&Co 09 MHEV 7 мест 
+
+В НАЛИЧИИ в Москве новый автомобиль
+Стоимость 5.100.000 с коммерческим утильсбором
+
+Платформа SPA (на ней же VOLVO XC90)
+Двигатель VEA (VOLVO ENGINE ARCHITECTURE)
+Двигатель 2.0Т - 254 лс 
+АКПП - 8ст автомат - AISIN
+Полный привод - Haldex 
+Бак - 70 литров
+Средний расход по Москве 10,9 (проверено лично)
+7 мест
+МА - запуск двигателя с телефона
+Есть лимитер - до 180 км/ч
+Адаптивный круиз с удержанием в полосе - до 130 км/ч
+Адаптивный круиз - до 150 км/ч"""
+
+    print("\nТестирование парсера для Lynk & Co\n")
+    
+    # Сначала пробуем прямой парсинг, минуя цепочку
+    print("Direct lynk format test:")
+    from parser import _try_lynk_format_parse
+    brand_list = []
+    result, failed = _try_lynk_format_parse(test_message, brand_list)
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    
+    # Затем полный парсинг через parse_car_text
+    print("\nFull parsing chain test:")
+    result, failed = parse_car_text(test_message, return_failures=True)
+    
+    print("Parsed result:")
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    print()
+
+    if failed:
+        print(f"Failed to parse: {', '.join(failed)}")
+    else:
+        print("No parsing failures!")
+
+    print("-" * 50)
+
 if __name__ == "__main__":
     test_emoji_format()
+    test_lynk_format()

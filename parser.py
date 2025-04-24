@@ -425,7 +425,8 @@ def _try_lynk_format_parse(text: str, brand_list: list[str]) -> tuple[dict, list
     first_line = lines[0]
     
     # Более строгий поиск с явным указанием Lynk&Co
-    if re.search(r'Lynk\s*&?\s*Co', first_line, re.IGNORECASE):
+    lynk_match = re.search(r'Lynk\s*&?\s*Co', first_line, re.IGNORECASE)
+    if lynk_match:
         # Выделяем бренд и модель
         result["brand"] = "Lynk & Co"
         
@@ -446,7 +447,9 @@ def _try_lynk_format_parse(text: str, brand_list: list[str]) -> tuple[dict, list
     
     # Поиск цены
     price_patterns = [
+        r"[Сс]тоимость\s*[-–]\s*([\d\s\.,]+)",
         r"[Сс]тоимость\s+([\d\s\.,]+)",
+        r"[Цц]ена\s*[-–]\s*([\d\s\.,]+)",
         r"[Цц]ена\s+([\d\s\.,]+)",
         r"([\d\s\.,]+)\s*(?:руб|₽|\$|USD|EUR|€)"
     ]
@@ -472,9 +475,10 @@ def _try_lynk_format_parse(text: str, brand_list: list[str]) -> tuple[dict, list
         if "price" in result:
             break
     
-    # Попытка поиска года выпуска
+    # Поиск года выпуска
     year_patterns = [
-        r'(\b20\d{2}\b)',  # 4-значный год начиная с 20
+        r'(\b20\d{2}\b)\s*(?:г\.в\.|год|г\.|года)',  # 4-значный год начиная с 20 с указанием что это год
+        r'(\b20\d{2}\b)',  # просто 4-значный год
     ]
     
     for pattern in year_patterns:
@@ -539,6 +543,7 @@ def _try_lynk_format_parse(text: str, brand_list: list[str]) -> tuple[dict, list
     # Поиск привода
     drive_patterns = [
         r"[Пп]олный\s+привод\s*[-:]\s*([^,\n\r]+)",
+        r"[Пп]олный\s+привод\s*-\s*([^,\n\r]+)",
         r"[Пп]олный\s+привод",
         r"[Пп]ередний\s+привод",
         r"[Зз]адний\s+привод"
@@ -566,11 +571,10 @@ def _try_lynk_format_parse(text: str, brand_list: list[str]) -> tuple[dict, list
         if "drive_type" in result:
             break
     
-    # Поиск пробега
+    # Поиск пробега или максимальной скорости (часто указывается как лимитер)
     mileage_patterns = [
-        r"(?:до|лимитер)\s*-?\s*до\s+(\d+)\s*км",  # Для строк типа "лимитер - до 180 км/ч"
         r"(?:пробег|км|kmh|километр|пробег):?\s*[^\d]*([\d\.,\s]+)",
-        r"(\d+[\.,]?\d*)\s*(?:km|км|тыс[\.\s]*км)"
+        r"(?:\d+[\.,]?\d*)\s*(?:km|км|тыс[\.\s]*км)"
     ]
     
     for pattern in mileage_patterns:
@@ -588,33 +592,27 @@ def _try_lynk_format_parse(text: str, brand_list: list[str]) -> tuple[dict, list
     
     # Составляем описание из всех строк, которые не были обработаны
     desc_lines = []
-    processed_patterns = [
-        r"[Сс]тоимость", r"[Цц]ена", r"\d{4}\s*г\.в\.", 
-        r"\d+\s*(?:л\.с\.|лс)", r"привод"
-    ]
     
-    for line in lines[1:]:  # Пропускаем первую строку с брендом/моделью
-        should_skip = False
-        for pattern in processed_patterns:
-            if re.search(pattern, line, re.IGNORECASE):
-                should_skip = True
-                break
-                
-        if not should_skip:
+    # Добавляем строки, которые могут быть важными
+    for i, line in enumerate(lines):
+        # Пропускаем первую строку с брендом/моделью
+        if i == 0:
+            continue
+            
+        # Добавляем описательные строки
+        if ("наличии" in line.lower() or 
+            "стоимость" in line.lower() or 
+            "цена" in line.lower() or
+            "бак" in line.lower() or
+            "расход" in line.lower() or
+            "мест" in line.lower() or
+            "запуск" in line.lower() or
+            "круиз" in line.lower() or
+            "удержани" in line.lower()):
             desc_lines.append(line)
     
     if desc_lines:
         result["description"] = " | ".join(desc_lines)
-    
-    # Проверяем, что у нас есть ключевые поля
-    if "brand" not in result:
-        failed.append("brand")
-    if "model" not in result:
-        failed.append("model")
-    if "price" not in result:
-        failed.append("price")
-    if "engine" not in result:
-        failed.append("engine")
     
     return result, failed
 
