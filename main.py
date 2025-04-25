@@ -75,19 +75,22 @@ async def process_session(message: Message, session: dict):
             await message.reply("⚠️ Нет фотографий. Сначала пришлите фото, потом описание.")
             return
 
-        car_data, failed_keys = parse_car_text(caption, return_failures=True)
-        # --- API Ninjas fallback at import time (extra safety) ---
-        if (not car_data.get("brand") or not car_data.get("model")) and car_data.get("description"):
-            ninjas_info = get_car_info_from_ninjas(car_data["description"])
-            if ninjas_info:
-                if ninjas_info.get("make"):
-                    car_data["brand"] = ninjas_info["make"]
-                if ninjas_info.get("model"):
-                    car_data["model"] = ninjas_info["model"]
-
-        if not car_data:
-            await message.reply("❌ Не удалось распарсить сообщение. Убедитесь в правильности формата.")
-            return
+        # --- First, try API Ninjas for brand/model ---
+        ninjas_info = get_car_info_from_ninjas(caption)
+        car_data = {}
+        if ninjas_info:
+            if ninjas_info.get("make"):
+                car_data["brand"] = ninjas_info["make"]
+            if ninjas_info.get("model"):
+                car_data["model"] = ninjas_info["model"]
+        # --- Then parse all other fields from text ---
+        parsed_data, failed_keys = parse_car_text(caption, return_failures=True)
+        # Merge brand/model from API Ninjas if not found by parser
+        if not parsed_data.get("brand") and car_data.get("brand"):
+            parsed_data["brand"] = car_data["brand"]
+        if not parsed_data.get("model") and car_data.get("model"):
+            parsed_data["model"] = car_data["model"]
+        car_data = parsed_data
 
         print("[REQUEST DATA]", json.dumps(car_data, ensure_ascii=False, indent=2))
 
