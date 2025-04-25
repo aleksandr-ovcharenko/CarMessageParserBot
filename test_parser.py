@@ -171,6 +171,27 @@ def test_lynk_format():
 
     print("-" * 50)
 
+def test_fob_price_usd():
+    test_message = '''Бренд: Audi A8 (импорт)
+Модель: A8L 50 TFSI quattro Premium Edition
+Год выпуска: июнь 2022 года
+Пробег: 35,000 км
+Двигатель: 3.0T, 286 л.с., полный привод
+Дополнительно: отличное состояние, постоянный полный привод
+FOB Хоргос-цена: $52,300 долларов США'''
+    result, failed = parse_car_text(test_message, return_failures=True)
+    print("\nTest: FOB price USD\nInput:")
+    print(test_message)
+    print("\nParsed result:")
+    import json
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if failed:
+        print(f"Failed to parse: {', '.join(failed)}")
+    else:
+        print("No parsing failures!")
+    print("-" * 50)
+
 if __name__ == "__main__":
     test_emoji_format()
     test_lynk_format()
+    test_fob_price_usd()

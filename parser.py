@@ -146,6 +146,16 @@ def _try_structured_parse(text: str, brand_list: list[str]) -> tuple[dict, list[
                 except:
                     pass
             result[key] = val
+            # --- Add currency detection for price field ---
+            if key == "price":
+                # Find the line containing the price to detect currency
+                price_line = None
+                for line in text.splitlines():
+                    if match.group(1) in line:
+                        price_line = line
+                        break
+                if price_line:
+                    result["currency"] = detect_currency(price_line)
         else:
             failed.append(key)
 
