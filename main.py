@@ -9,6 +9,7 @@ from pyrogram.types import Message
 from config import ALLOWED_USERS, API_TOKEN, API_ID, API_HASH, BOT_TOKEN
 from parser import parse_car_text
 from utils import send_to_api
+from api_ninjas import get_car_info_from_ninjas
 
 # Configure logging
 logging.basicConfig(
@@ -75,6 +76,15 @@ async def process_session(message: Message, session: dict):
             return
 
         car_data, failed_keys = parse_car_text(caption, return_failures=True)
+        # --- API Ninjas fallback at import time (extra safety) ---
+        if (not car_data.get("brand") or not car_data.get("model")) and car_data.get("description"):
+            ninjas_info = get_car_info_from_ninjas(car_data["description"])
+            if ninjas_info:
+                if ninjas_info.get("make"):
+                    car_data["brand"] = ninjas_info["make"]
+                if ninjas_info.get("model"):
+                    car_data["model"] = ninjas_info["model"]
+
         if not car_data:
             await message.reply("❌ Не удалось распарсить сообщение. Убедитесь в правильности формата.")
             return

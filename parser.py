@@ -15,18 +15,29 @@ def parse_car_text(text: str, return_failures=False):
     """
     brand_list = load_brand_list()
     data, failed = _try_structured_parse(text, brand_list)
-    if not data or data.get("brand") is None:
+    if not data or data.get("brand") is None or not data.get("model"):
         data, failed = _try_emoji_format_parse(text, brand_list)
-        if not data or data.get("brand") is None:
+        if not data or data.get("brand") is None or not data.get("model"):
             data, failed = _try_lynk_format_parse(text, brand_list)
-            if not data or data.get("brand") is None:
+            if not data or data.get("brand") is None or not data.get("model"):
                 # Попробуем парсить без структуры
                 data, failed = _try_unstructured_specs_parse(text, brand_list)
-                if not data or data.get("brand") is None:
+                if not data or data.get("brand") is None or not data.get("model"):
                     # Крайний случай - попробуем полностью свободный формат
                     data = parse_car_text_freeform(text, brand_list)
                     failed = []  # мы не валим на ошибке в этом режиме
-
+    # --- API Ninjas fallback ---
+    if (not data.get("brand") or not data.get("model")) and data.get("description"):
+        try:
+            from api_ninjas import get_car_info_from_ninjas
+            ninjas_info = get_car_info_from_ninjas(data["description"])
+            if ninjas_info:
+                if ninjas_info.get("make"):
+                    data["brand"] = ninjas_info["make"]
+                if ninjas_info.get("model"):
+                    data["model"] = ninjas_info["model"]
+        except Exception as e:
+            print(f"[API NINJAS FALLBACK ERROR] {e}")
     if return_failures:
         return data, failed
     return data
