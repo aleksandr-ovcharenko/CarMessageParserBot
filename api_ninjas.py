@@ -17,6 +17,8 @@ def get_car_info_from_ninjas(description: str):
     Uses API Ninjas Cars API to get car brand and model by description.
     Returns a dict with 'make' and 'model' if found, else None.
     """
+    print(f"[TEST] Query: {description}")
+    logging.info(f"[TEST] Query: {description}")
     if not API_NINJAS_TOKEN:
         raise ValueError("API_NINJAS_TOKEN is not set in environment")
 
