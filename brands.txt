@@ -1,64 +1,315 @@
-Audi
-Avatr
-BAIC
-BMW
-Buick
-BYD
-Cadillac
-Changan
-Chery
-Chevrolet
-Citroen
-Denza
-Dongfeng
-Exeed
-FAW
-Ford
-Forthing
-GAC
-Geely
-Great Wall
-Haval
-HiPhi
-Honda
-Hongqi
-Huawei
-Hyundai
-Infiniti
-Jaguar
-Jetour
-Jetta
-Jishi
-Kia
-Land Rover
-Leamotor
-Lexus
-Lincoln
-LiXiang
-Lotus
-Lynk & Co
-Li Auto
-Mazda
-Mercedes-Benz
-MG
-Mini
-Mitsubishi
-Neta
-Nio
-Nissan
-Peugeot
-Polestar
-Porsche
-Skoda
-Smart
-Tank
-Tesla
-Toyota
-Venucia
-Volkswagen
-Volvo
-Voyah
-Wuling
-Xiaomi
-Xpeno
-Zeekr
+# Canonical brand and synonym mapping (brand variants -> canonical)
+# Format: synonym_or_variant = Canonical Brand Name
+li = Li Auto
+li xiang = Li Auto
+理想 = Li Auto
+byd = BYD
+比亚迪 = BYD
+denza = Denza
+腾势 = Denza
+ora = ORA
+欧拉 = ORA
+nio = NIO
+蔚来 = NIO
+wm = WM Motor
+weltmeister = WM Motor
+威马 = WM Motor
+gwm = Great Wall Motors
+哈弗 = Haval
+great wall = Great Wall Motors
+jac = JAC
+江淮 = JAC
+jmc = JMC
+江铃 = JMC
+mg = MG
+名爵 = MG
+gac = GAC
+广汽 = GAC
+faw = FAW
+一汽 = FAW
+dfm = Dongfeng Motor
+东风 = Dongfeng Motor
+baic = BAIC Motor
+北汽 = BAIC Motor
+haval = Haval
+wuling = Wuling
+五菱 = Wuling
+maxus = Maxus
+上汽大通 = Maxus
+chery = Chery
+奇瑞 = Chery
+changan = Changan
+长安 = Changan
+jetour = Jetour
+捷途 = Jetour
+hongqi = Hongqi
+红旗 = Hongqi
+venucia = Venucia
+启辰 = Venucia
+leapmotor = Leapmotor
+零跑 = Leapmotor
+xpeng = Xpeng
+小鹏 = Xpeng
+neta = Neta
+哪吒 = Neta
+aion = Aion
+埃安 = Aion
+geely = Geely
+吉利 = Geely
+lynk = Lynk & Co
+领克 = Lynk & Co
+maple = Maple
+枫叶 = Maple
+seres = Seres
+赛力斯 = Seres
+roewe = Roewe
+荣威 = Roewe
+foton = Foton
+福田 = Foton
+yutong = Yutong
+宇通 = Yutong
+enovate = Enovate
+天际 = Enovate
+bestune = Bestune
+奔腾 = Bestune
+cowin = Cowin
+开瑞 = Cowin
+leopaard = Leopaard
+猎豹 = Leopaard
+polestones = Polestones
+极石 = Polestones
+traum = Traum
+君马 = Traum
+soueast = Soueast
+东南 = Soueast
+skywell = Skywell
+天美 = Skywell
+singulato = Singulato
+奇点 = Singulato
+zedriv = Zedriv
+芝麻 = Zedriv
+zhidou = Zhidou
+知豆 = Zhidou
+zotye = Zotye
+众泰 = Zotye
+baojun = Baojun
+宝骏 = Baojun
+arcfox = Arcfox
+极狐 = Arcfox
+aiways = Aiways
+爱驰 = Aiways
+human horizons = Human Horizons
+华人运通 = Human Horizons
+higer = Higer
+海格 = Higer
+haima = Haima
+海马 = Haima
+karry = Karry
+开瑞 = Karry
+lifan = Lifan
+力帆 = Lifan
+sokon = Sokon
+东风小康 = Sokon
+wey = WEY
+魏派 = WEY
+xiamen = Xiamen King Long
+厦门金龙 = Xiamen King Long
+zhongtong = Zhongtong
+中通 = Zhongtong
+# Major world brands
+alfa romeo = Alfa Romeo
+阿尔法罗密欧 = Alfa Romeo
+aston martin = Aston Martin
+阿斯顿马丁 = Aston Martin
+bentley = Bentley
+宾利 = Bentley
+bugatti = Bugatti
+布加迪 = Bugatti
+dacia = Dacia
+达契亚 = Dacia
+dodge = Dodge
+道奇 = Dodge
+fiat = Fiat
+菲亚特 = Fiat
+genesis = Genesis
+捷尼赛思 = Genesis
+gmc = GMC
+吉姆西 = GMC
+jeep = Jeep
+吉普 = Jeep
+lada = Lada
+拉达 = Lada
+maserati = Maserati
+玛莎拉蒂 = Maserati
+opel = Opel
+欧宝 = Opel
+ram = RAM
+公羊 = RAM
+renault = Renault
+雷诺 = Renault
+rolls royce = Rolls-Royce
+劳斯莱斯 = Rolls-Royce
+saab = Saab
+萨博 = Saab
+seat = SEAT
+西亚特 = SEAT
+skoda = Skoda
+斯柯达 = Skoda
+subaru = Subaru
+斯巴鲁 = Subaru
+suzuki = Suzuki
+铃木 = Suzuki
+tesla = Tesla
+特斯拉 = Tesla
+toyota = Toyota
+丰田 = Toyota
+volkswagen = Volkswagen
+大众 = Volkswagen
+volvo = Volvo
+沃尔沃 = Volvo
+peugeot = Peugeot
+标致 = Peugeot
+citroen = Citroen
+雪铁龙 = Citroen
+ford = Ford
+福特 = Ford
+chevrolet = Chevrolet
+雪佛兰 = Chevrolet
+hyundai = Hyundai
+现代 = Hyundai
+honda = Honda
+本田 = Honda
+nissan = Nissan
+日产 = Nissan
+kia = Kia
+起亚 = Kia
+mazda = Mazda
+马自达 = Mazda
+lexus = Lexus
+雷克萨斯 = Lexus
+infiniti = Infiniti
+英菲尼迪 = Infiniti
+jaguar = Jaguar
+捷豹 = Jaguar
+mitsubishi = Mitsubishi
+三菱 = Mitsubishi
+mini = Mini
+迷你 = Mini
+smart = Smart
+精灵 = Smart
+porsche = Porsche
+保时捷 = Porsche
+land rover = Land Rover
+路虎 = Land Rover
+chrysler = Chrysler
+克莱斯勒 = Chrysler
+vw = Volkswagen
+v w = Volkswagen
+v.w. = Volkswagen
+大众 = Volkswagen
+audi = Audi
+奥迪 = Audi
+a u d i = Audi
+a.u.d.i. = Audi
+bmw = BMW
+宝马 = BMW
+b m w = BMW
+b.m.w. = BMW
+mercedes benz = Mercedes-Benz
+梅赛德斯 = Mercedes-Benz
+奔驰 = Mercedes-Benz
+mercedes-benz = Mercedes-Benz
+mercedesbenz = Mercedes-Benz
+mercedes = Mercedes-Benz
+toyota = Toyota
+丰田 = Toyota
+t o y o t a = Toyota
+t.o.y.o.t.a. = Toyota
+ford = Ford
+福特 = Ford
+f o r d = Ford
+f.o.r.d. = Ford
+chevrolet = Chevrolet
+雪佛兰 = Chevrolet
+c h e v r o l e t = Chevrolet
+c.h.e.v.r.o.l.e.t. = Chevrolet
+hyundai = Hyundai
+现代 = Hyundai
+h y u n d a i = Hyundai
+h.y.u.n.d.a.i. = Hyundai
+honda = Honda
+本田 = Honda
+h o n d a = Honda
+h.o.n.d.a. = Honda
+nissan = Nissan
+日产 = Nissan
+n i s s a n = Nissan
+n.i.s.s.a.n. = Nissan
+kia = Kia
+起亚 = Kia
+k i a = Kia
+k.i.a. = Kia
+mazda = Mazda
+马自达 = Mazda
+m a z d a = Mazda
+m.a.z.d.a. = Mazda
+lexus = Lexus
+雷克萨斯 = Lexus
+l e x u s = Lexus
+l.e.x.u.s. = Lexus
+infiniti = Infiniti
+英菲尼迪 = Infiniti
+i n f i n i t i = Infiniti
+i.n.f.i.n.i.t.i. = Infiniti
+jaguar = Jaguar
+捷豹 = Jaguar
+j a g u a r = Jaguar
+j.a.g.u.a.r. = Jaguar
+mitsubishi = Mitsubishi
+三菱 = Mitsubishi
+m i t s u b i s h i = Mitsubishi
+m.i.t.s.u.b.i.s.h.i. = Mitsubishi
+suzuki = Suzuki
+铃木 = Suzuki
+s u z u k i = Suzuki
+s.u.z.u.k.i. = Suzuki
+subaru = Subaru
+斯巴鲁 = Subaru
+s u b a r u = Subaru
+s.u.b.a.r.u. = Subaru
+peugeot = Peugeot
+标致 = Peugeot
+p e u g e o t = Peugeot
+p.e.u.g.e.o.t. = Peugeot
+citroen = Citroen
+雪铁龙 = Citroen
+c i t r o e n = Citroen
+c.i.t.r.o.e.n. = Citroen
+skoda = Skoda
+斯柯达 = Skoda
+s k o d a = Skoda
+s.k.o.d.a. = Skoda
+renault = Renault
+雷诺 = Renault
+r e n a u l t = Renault
+r.e.n.a.u.l.t. = Renault
+fiat = Fiat
+菲亚特 = Fiat
+f i a t = Fiat
+f.i.a.t. = Fiat
+opel = Opel
+欧宝 = Opel
+o p e l = Opel
+o.p.e.l. = Opel
+volvo = Volvo
+沃尔沃 = Volvo
+v o l v o = Volvo
+v.o.l.v.o. = Volvo
+mini = Mini
+迷你 = Mini
+m i n i = Mini
+m.i.n.i. = Mini
+smart = Smart
+精灵 = Smart
+s m a r t = Smart
+s.m.a.r.t. = Smart

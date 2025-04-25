@@ -212,8 +212,75 @@ Black/orange
         print("No parsing failures!")
     print("-" * 50)
 
+def test_audi_brand_model_extraction():
+    test_message = '''Бренд: Audi A8 (импорт)
+Модель: A8L 50 TFSI quattro Premium Edition'''
+    result, failed = parse_car_text(test_message, return_failures=True)
+    print("\nTest: Audi brand/model extraction\nInput:")
+    print(test_message)
+    print("\nParsed result:")
+    import json
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    assert result.get("brand") == "Audi", f"Expected brand 'Audi', got {result.get('brand')}"
+    assert result.get("model") == "A8", f"Expected model 'A8', got {result.get('model')}"
+    print("Test passed!")
+    print("-" * 50)
+
+def test_li_auto_short_form():
+    test_message = 'Li 8 Pro'
+    result, failed = parse_car_text(test_message, return_failures=True)
+    print("\nTest: Li Auto short form\nInput:")
+    print(test_message)
+    print("\nParsed result:")
+    import json
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    assert result.get("brand") in ("Li Auto", "Li Xiang", "Li"), f"Expected brand 'Li Auto' or synonym, got {result.get('brand')}"
+    assert result.get("model") == "8 Pro", f"Expected model '8 Pro', got {result.get('model')}"
+    print("Test passed!")
+    print("-" * 50)
+
+def test_european_and_chinese_model_extraction():
+    cases = [
+        ("Марка: Mercedes-Benz S-Class (импорт)\nМодель: S 450 L 4MATIC", "Mercedes-Benz", "S-Class", "S 450 L 4MATIC"),
+        ("Марка: Audi A6L\nМодель: 45 TFSI Premium Sport Edition", "Audi", "A6L", "45 TFSI Premium Sport Edition"),
+        ("Марка: Porsche Cayenne (гибрид, новая энергия)\nМодель: Cayenne E-Hybrid 2.0T", "Porsche", "Cayenne", "Cayenne E-Hybrid 2.0T"),
+        ("BMW X5 (импорт)", "BMW", "X5", ""),
+        ("Mercedes Benz GLE350", "Mercedes-Benz", "GLE350", "")
+    ]
+    for i, (text, exp_brand, exp_model, exp_full_model) in enumerate(cases):
+        print(f"\nTest case {i+1}:\nInput: {text}")
+        result, failed = parse_car_text(text, return_failures=True)
+        print("Parsed result:")
+        import json
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        assert result.get("brand") == exp_brand, f"Expected brand '{exp_brand}', got {result.get('brand')}"
+        assert exp_model in result.get("model", ""), f"Expected model to contain '{exp_model}', got {result.get('model')}"
+        print("Test passed!")
+        print("-" * 50)
+
+def test_more_european_model_cases():
+    cases = [
+        ("Марка: BMW 4 Series\nМодель: 430i Gran Coupe M Sport Night Edition", "BMW", "4 Series", "430i Gran Coupe M Sport Night Edition"),
+        ("Марка: BMW 7 Series (импорт)\nМодель: 735Li M Sport Package", "BMW", "7 Series", "735Li M Sport Package"),
+        ("Марка: Mercedes-Benz E-Class\nМодель: E 300 2.0T (максимальная комплектация)", "Mercedes-Benz", "E-Class", "E 300 2.0T (максимальная комплектация)")
+    ]
+    for i, (text, exp_brand, exp_model, exp_full_model) in enumerate(cases):
+        print(f"\nTest case (additional) {i+1}:\nInput: {text}")
+        result, failed = parse_car_text(text, return_failures=True)
+        print("Parsed result:")
+        import json
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        assert result.get("brand") == exp_brand, f"Expected brand '{exp_brand}', got {result.get('brand')}"
+        assert exp_model in result.get("model", ""), f"Expected model to contain '{exp_model}', got {result.get('model')}"
+        print("Test passed!")
+        print("-" * 50)
+
 if __name__ == "__main__":
     test_emoji_format()
     test_lynk_format()
     test_fob_price_usd()
     test_price_with_dollar_emoji()
+    test_audi_brand_model_extraction()
+    test_li_auto_short_form()
+    test_european_and_chinese_model_extraction()
+    test_more_european_model_cases()

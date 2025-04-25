@@ -44,20 +44,94 @@ def parse_car_text(text: str, return_failures=False):
 
 
 def detect_brand_and_model(raw_string: str, brand_list: list[str]) -> tuple[str, str]:
-    """Ищет бренд в начале строки и делит её на brand и model"""
-    raw = raw_string.strip().lower()
-
-    for brand in sorted(brand_list, key=lambda x: -len(x)):  # самые длинные сначала
-        if raw.startswith(brand):
-            model = raw[len(brand):].strip()
-            return brand.capitalize(), model
-
-    return raw_string, ""  # fallback
+    """
+    Ищет бренд в начале строки и делит её на brand и model.
+    Возвращает бренд с оригинальным регистром (как в brands.txt), модель — первую часть после бренда (до пробела или скобки/скобок).
+    Также поддерживает сокращённые формы (например, 'Li 8 Pro' → 'Li Auto', '8 Pro').
+    Для строк типа 'Марка: BRAND MODEL (extra)' модель = MODEL (до скобки).
+    Для 'Модель:' строк модель = полная строка.
+    """
+    import re
+    brand_map = load_brand_map()
+    raw = raw_string.strip()
+    raw_lower = raw.lower()
+    first_word = raw.split()[0].lower() if raw.split() else ""
+    # Try short form mapping FIRST using brand_map
+    if first_word in brand_map:
+        canonical_brand = brand_map[first_word]
+        model_part = raw[len(first_word):].strip()
+        model_core = re.split(r'\(', model_part)[0].strip() if model_part else ""
+        model_core = re.sub(r'[А-Яа-яЁё]+', '', model_core).strip()
+        model = model_core
+        if not model and model_part:
+            model = re.sub(r'[А-Яа-яЁё]+', '', model_part).strip()
+        return canonical_brand, model
+    # Try exact match
+    for brand in sorted(brand_list, key=lambda x: -len(x)):
+        brand_lower = brand.lower()
+        if raw_lower.startswith(brand_lower):
+            # Ensure we match only the brand, not a mapping line (e.g. 'li = Li Auto')
+            if '=' in brand:
+                continue
+            model_part = raw[len(brand):].strip()
+            model_core = re.split(r'\(', model_part)[0].strip() if model_part else ""
+            model_core = re.sub(r'[А-Яа-яЁё]+', '', model_core).strip()
+            model = model_core
+            if not model and model_part:
+                model = re.sub(r'[А-Яа-яЁё]+', '', model_part).strip()
+            canonical_brand = brand_map.get(brand_lower, brand)
+            return canonical_brand, model
+    # Try partial match: first word of input matches first word of a brand
+    for brand in sorted(brand_list, key=lambda x: -len(x)):
+        brand_first_word = brand.split()[0].lower()
+        if first_word and first_word == brand_first_word:
+            model_part = raw[len(first_word):].strip()
+            model_core = re.split(r'\(', model_part)[0].strip() if model_part else ""
+            model_core = re.sub(r'[А-Яа-яЁё]+', '', model_core).strip()
+            model = model_core
+            if not model and model_part:
+                model = re.sub(r'[А-Яа-яЁё]+', '', model_part).strip()
+            canonical_brand = brand_map.get(brand_lower, brand)
+            return canonical_brand, model
+    return None, None  # fallback, not raw_string
 
 
 def load_brand_list(filepath="brands.txt") -> list[str]:
+    # Only return canonical brand names and synonyms, skip mapping lines
+    result = []
     with open(filepath, encoding="utf-8") as f:
-        return [line.strip().lower() for line in f if line.strip()]
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            if '=' in line:
+                left, right = [x.strip() for x in line.split('=', 1)]
+                # Add both left (synonym) and right (canonical) for matching
+                result.append(left)
+                result.append(right)
+            else:
+                result.append(line)
+    return result
+
+
+def load_brand_map(filepath="brands.txt") -> dict:
+    """Returns a mapping from each synonym/variant to canonical brand (first occurrence wins)."""
+    brand_map = {}
+    with open(filepath, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            if '=' in line:
+                left, right = [x.strip() for x in line.split('=', 1)]
+                if left.lower() not in brand_map:
+                    brand_map[left.lower()] = right
+                if right.lower() not in brand_map:
+                    brand_map[right.lower()] = right
+            else:
+                if line.lower() not in brand_map:
+                    brand_map[line.lower()] = line
+    return brand_map
 
 
 def parse_car_text_freeform(text: str, brand_list: list[str]) -> dict:
@@ -343,7 +417,7 @@ def _try_emoji_format_parse(text: str, brand_list: list[str]) -> tuple[dict, lis
             break
     
     # Трансмиссия: АКПП/МКПП/DSG/CVT/DCT и т.д.
-    transmission_pattern = r"(?:Трансмиссия|КПП):?\s*(.+)"
+    transmission_pattern = r"(?:АКПП|КПП|трансмиссия):?\s*(.+)"
     for line in lines:
         match = re.search(transmission_pattern, line)
         if match:
@@ -599,7 +673,7 @@ def _try_lynk_format_parse(text: str, brand_list: list[str]) -> tuple[dict, list
     # Поиск пробега или максимальной скорости (часто указывается как лимитер)
     mileage_patterns = [
         r"(?:пробег|км|kmh|километр|пробег):?\s*[^\d]*([\d\.,\s]+)",
-        r"(?:\d+[\.,]?\d*)\s*(?:km|км|тыс[\.\s]*км)"
+        r"(?:\d+[\.,]?\d*)\s*(?:km|км)"
     ]
     
     for pattern in mileage_patterns:
