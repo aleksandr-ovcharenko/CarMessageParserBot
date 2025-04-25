@@ -15,7 +15,9 @@ def get_car_info_from_ninjas(description: str):
 
     headers = {"X-Api-Key": API_NINJAS_TOKEN}
     params = {"limit": 1, "query": description}
+    print(f"[API NINJAS REQUEST] Query: {description}")
     response = requests.get(API_NINJAS_CARS_URL, headers=headers, params=params, timeout=10)
+    print(f"[API NINJAS RESPONSE] Status: {response.status_code}, Body: {response.text}")
 
     if response.status_code == 200:
         data = response.json()
@@ -24,5 +26,4 @@ def get_car_info_from_ninjas(description: str):
             return {"make": data[0].get("make"), "model": data[0].get("model")}
         return None
     else:
-        print(f"[API NINJAS ERROR] Status: {response.status_code}, Body: {response.text}")
         return None

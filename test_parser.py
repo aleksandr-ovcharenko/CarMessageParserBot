@@ -191,7 +191,29 @@ FOB Хоргос-цена: $52,300 долларов США'''
         print("No parsing failures!")
     print("-" * 50)
 
+def test_price_with_dollar_emoji():
+    test_message = '''Li 8 Pro
+2023/07
+Black/orange
+Без зарядной станции, можно докупить отдельно за 450$
+Машина в Хоргосе
+Пробег 22.000км
+Без окрасов
+Цена 💲 34.500'''
+    result, failed = parse_car_text(test_message, return_failures=True)
+    print("\nTest: Price with dollar emoji\nInput:")
+    print(test_message)
+    print("\nParsed result:")
+    import json
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if failed:
+        print(f"Failed to parse: {', '.join(failed)}")
+    else:
+        print("No parsing failures!")
+    print("-" * 50)
+
 if __name__ == "__main__":
     test_emoji_format()
     test_lynk_format()
     test_fob_price_usd()
+    test_price_with_dollar_emoji()

@@ -88,8 +88,12 @@ def parse_car_text_freeform(text: str, brand_list: list[str]) -> dict:
 
     # 💰 Цена
     for line in lines:
-        if "цена" in line.lower() or "$" in line or "₽" in line or "¥" in line:
-            price_match = re.search(r"([\d\s.,]+)", line)
+        # Look for price indicators including 💲, $ or word 'цена'
+        if ("цена" in line.lower() or "$" in line or "₽" in line or "¥" in line or "💲" in line or "💵" in line):
+            # Remove all non-digit/currency/space/emoji chars except separators
+            cleaned_line = line.replace('\xa0', ' ').replace('\u202f', ' ')
+            # Try to match price after any currency indicator or at end
+            price_match = re.search(r"([\d][\d\s.,]*)", cleaned_line)
             if price_match:
                 result["price"] = clean_number(price_match.group(1))
                 result["currency"] = detect_currency(line)

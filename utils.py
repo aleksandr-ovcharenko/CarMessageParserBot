@@ -9,8 +9,10 @@ def send_to_api(data: dict):
         "Content-Type": "application/json"
     }
 
+    print(f"[API IMPORT REQUEST] URL: {ENDPOINT_URL}\nPayload: {data}")
     try:
         response = requests.post(ENDPOINT_URL, json=data, headers=headers, timeout=API_TIMEOUT)
+        print(f"[API IMPORT RESPONSE] Status: {response.status_code}, Body: {response.text}")
         return response
     except requests.exceptions.RequestException as e:
         print("[API CONNECTION ERROR]", e)
