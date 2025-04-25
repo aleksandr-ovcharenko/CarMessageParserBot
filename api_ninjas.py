@@ -2,6 +2,12 @@ import os
 import requests
 import logging
 
+# Ensure logging is configured the same as main.py
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(levelname)s] %(message)s'
+)
+
 API_NINJAS_TOKEN = os.getenv("API_NINJAS_TOKEN")
 API_NINJAS_CARS_URL = "https://api.api-ninjas.com/v1/cars"
 

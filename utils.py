@@ -1,6 +1,12 @@
 import requests
 import logging
 
+# Ensure logging is configured the same as main.py
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(levelname)s] %(message)s'
+)
+
 from config import ENDPOINT_URL, API_TOKEN, API_TIMEOUT
 
 
