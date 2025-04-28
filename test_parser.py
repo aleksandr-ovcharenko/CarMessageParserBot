@@ -275,6 +275,61 @@ def test_more_european_model_cases():
         print("Test passed!")
         print("-" * 50)
 
+def test_brand_model_modification_format():
+    """
+    Test the improved parser with specific format: [Brand] [Model] [Modification]
+    Examples provided by the user.
+    """
+    test_cases = [
+        ("Mercedes-Benz E-Class E 300 2.0T Avantgarde", "Mercedes-Benz", "E-Class", "E 300 2.0T Avantgarde"),
+        ("BMW X5 xDrive30d M Sport", "BMW", "X5", "xDrive30d M Sport"),
+        ("Audi A6 45 TFSI quattro Sport", "Audi", "A6", "45 TFSI quattro Sport"),
+        ("Toyota Camry 2.5L Prestige Safety", "Toyota", "Camry", "2.5L Prestige Safety"),
+        ("Volkswagen Tiguan 2.0 TSI 4Motion R-Line", "Volkswagen", "Tiguan", "2.0 TSI 4Motion R-Line"),
+        ("Lexus RX 350 AWD Luxury", "Lexus", "RX", "350 AWD Luxury"),
+        ("Kia Sportage 2.0 MPI Luxe", "Kia", "Sportage", "2.0 MPI Luxe"),
+        ("Hyundai Sonata 2.5 Smartstream Style", "Hyundai", "Sonata", "2.5 Smartstream Style"),
+        ("Mazda CX-5 2.5 AWD Supreme", "Mazda", "CX-5", "2.5 AWD Supreme"),
+        ("Porsche Macan 2.0T PDK Premium Plus", "Porsche", "Macan", "2.0T PDK Premium Plus"),
+        ("Ford Explorer 3.0 EcoBoost Platinum", "Ford", "Explorer", "3.0 EcoBoost Platinum"),
+        ("Volvo XC90 T6 AWD Inscription", "Volvo", "XC90", "T6 AWD Inscription"),
+        ("Audi A5 (импорт) Sportback 40 TFSI Fashion Dynamic", "Audi", "A5", "Sportback 40 TFSI Fashion Dynamic"),
+
+    ]
+    
+    print("\nTesting Brand Model Modification Format:\n")
+    print("-" * 80)
+    
+    # Import the function to test from parser module
+    from parser import improved_brand_model_parse, load_brand_list
+    brand_list = load_brand_list()
+    
+    for i, (test_input, expected_brand, expected_model, expected_modification) in enumerate(test_cases, 1):
+        print(f"Test case #{i}:")
+        print(f"Input: {test_input}")
+        
+        brand, model, modifications = improved_brand_model_parse(test_input, brand_list)
+        
+        print(f"Expected: {expected_brand} / {expected_model} / {expected_modification}")
+        print(f"Actual  : {brand} / {model} / {modifications}")
+        
+        if brand == expected_brand and model == expected_model and modifications == expected_modification:
+            print("✅ Test passed!")
+        else:
+            print("❌ Test failed!")
+            
+            # Show which parts failed
+            if brand != expected_brand:
+                print(f"  Brand mismatch: expected '{expected_brand}', got '{brand}'")
+            if model != expected_model:
+                print(f"  Model mismatch: expected '{expected_model}', got '{model}'")
+            if modifications != expected_modification:
+                print(f"  Modification mismatch: expected '{expected_modification}', got '{modifications}'")
+                
+        print("-" * 80)
+    
+    print("Brand Model Modification Format testing completed!")
+
 if __name__ == "__main__":
     test_emoji_format()
     test_lynk_format()
@@ -284,3 +339,4 @@ if __name__ == "__main__":
     test_li_auto_short_form()
     test_european_and_chinese_model_extraction()
     test_more_european_model_cases()
+    test_brand_model_modification_format()

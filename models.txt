@@ -1,0 +1,263 @@
+# Car model patterns configuration
+# Format: brand:pattern_type:pattern_regex
+
+# European Car Makers - Series/Class patterns
+mercedes-benz:series_class:([A-Z])[-\s]?([Cc]lass)
+bmw:series_class:([0-9])[-\s]?([Ss]eries)
+
+# Alphanumeric model patterns
+audi:alphanumeric:^([A-Z][0-9]+)$
+bmw:alphanumeric:^([A-Z][0-9X]+)$
+mercedes-benz:alphanumeric:^([A-Z][0-9]+)$
+volvo:alphanumeric:^(XC[0-9]+)$
+mazda:alphanumeric:^(CX-[0-9]+)$
+lexus:alphanumeric:^([A-Z][A-Z])$
+land rover:alphanumeric:^(Discovery|Range Rover)
+
+# European and American model patterns
+volkswagen:model:Tiguan
+volkswagen:model:Touareg
+volkswagen:model:Polo
+volkswagen:model:Golf
+volkswagen:model:Passat
+volkswagen:model:Arteon
+volkswagen:model:ID.3
+volkswagen:model:ID.4
+volkswagen:model:ID.6
+volkswagen:model:T-Roc
+volkswagen:model:T-Cross
+volkswagen:model:Jetta
+toyota:model:Camry
+toyota:model:Corolla
+toyota:model:RAV4
+toyota:model:Land Cruiser
+toyota:model:Highlander
+toyota:model:Fortuner
+toyota:model:Prado
+toyota:model:Hilux
+toyota:model:Yaris
+hyundai:model:Tucson
+hyundai:model:Santa Fe
+hyundai:model:Sonata
+hyundai:model:Elantra
+hyundai:model:ix35
+hyundai:model:Creta
+kia:model:Sportage
+kia:model:Sorento
+kia:model:Cerato
+kia:model:Rio
+kia:model:Seltos
+ford:model:Explorer
+ford:model:Focus
+ford:model:Kuga
+ford:model:Mondeo
+ford:model:Mustang
+ford:model:F-150
+porsche:model:Macan
+porsche:model:Cayenne
+porsche:model:Panamera
+porsche:model:911
+citroen:model:C3
+citroen:model:C4
+citroen:model:C5
+peugeot:model:208
+peugeot:model:308
+peugeot:model:508
+renault:model:Clio
+renault:model:Captur
+renault:model:Megane
+opel:model:Astra
+opel:model:Corsa
+opel:model:Mokka
+fiat:model:500
+fiat:model:Panda
+fiat:model:Tipo
+alfa romeo:model:Giulia
+alfa romeo:model:Stelvio
+aston martin:model:Vantage
+aston martin:model:DB11
+bentley:model:Continental
+bentley:model:Bentayga
+bugatti:model:Chiron
+bugatti:model:Veyron
+chevrolet:model:Camaro
+chevrolet:model:Cruze
+chevrolet:model:Malibu
+chrysler:model:300C
+chrysler:model:Pacifica
+dodge:model:Challenger
+dodge:model:Charger
+jeep:model:Wrangler
+jeep:model:Cherokee
+jeep:model:Grand Cherokee
+jaguar:model:F-Pace
+jaguar:model:XE
+jaguar:model:XF
+land rover:model:Discovery
+land rover:model:Range Rover
+mini:model:Cooper
+mini:model:Countryman
+mitsubishi:model:Outlander
+mitsubishi:model:Pajero
+mitsubishi:model:L200
+nissan:model:Qashqai
+nissan:model:X-Trail
+nissan:model:Juke
+nissan:model:Murano
+rolls-royce:model:Phantom
+rolls-royce:model:Ghost
+rolls-royce:model:Cullinan
+saab:model:9-3
+saab:model:9-5
+seat:model:Leon
+seat:model:Ibiza
+skoda:model:Octavia
+skoda:model:Kodiaq
+skoda:model:Superb
+smart:model:ForTwo
+smart:model:ForFour
+subaru:model:Forester
+subaru:model:Outback
+subaru:model:Impreza
+suzuki:model:Swift
+suzuki:model:Vitara
+suzuki:model:SX4
+volvo:model:S60
+volvo:model:S90
+volvo:model:V60
+volvo:model:V90
+
+# Asian Car Makers - Japanese, Korean and others
+infiniti:alphanumeric:^([A-Z][0-9]+)$
+infiniti:model:QX50
+infiniti:model:QX60
+infiniti:model:QX80
+genesis:model:G70
+genesis:model:G80
+genesis:model:G90
+genesis:model:GV70
+genesis:model:GV80
+honda:model:Civic
+honda:model:Accord
+honda:model:CR-V
+honda:model:HR-V
+honda:model:Pilot
+lexus:model:ES
+lexus:model:LS
+lexus:model:NX
+lexus:model:RX
+lexus:model:UX
+lexus:model:LX
+
+# Chinese brands
+byd:model:Han
+byd:model:Tang
+byd:model:Song
+byd:model:Qin
+byd:model:Yuan
+byd:model:Dolphin
+byd:model:Seal
+li auto:model:ONE
+li auto:model:L7
+li auto:model:L8
+li auto:model:L9
+nio:model:ES6
+nio:model:ES8
+nio:model:ET5
+nio:model:ET7
+xpeng:model:P7
+xpeng:model:G3
+xpeng:model:G9
+geely:model:Coolray
+geely:model:Atlas
+geely:model:Tugella
+geely:model:Monjaro
+lynk & co:model:01
+lynk & co:model:02
+lynk & co:model:03
+lynk & co:model:05
+lynk & co:model:06
+lynk & co:model:09
+chery:model:Tiggo
+chery:model:Arrizo
+changan:model:CS35
+changan:model:CS55
+changan:model:CS75
+haval:model:F7
+haval:model:H6
+haval:model:Jolion
+wey:model:VV5
+wey:model:VV6
+wey:model:VV7
+great wall motors:model:Poer
+great wall motors:model:Wingle
+hongqi:model:E-HS9
+hongqi:model:H9
+hongqi:model:HS5
+aion:model:S
+aion:model:Y
+aion:model:V
+human horizons:model:HiPhi X
+human horizons:model:HiPhi Z
+tesla:model:Model 3
+tesla:model:Model Y
+tesla:model:Model S
+tesla:model:Model X
+
+# Additional Chinese brands with numeric models
+leapmotor:alphanumeric:^([CT][0-9]+)$
+neta:alphanumeric:^([VU][0-9]+)$
+zedriv:alphanumeric:^(X[0-9]+)$
+
+# Additional Patterns for all remaining brands
+# Prefix-number patterns (RX 350, etc.)
+lexus:prefix_number:^([A-Z]+)$
+infiniti:prefix_number:^([A-Z]+)$
+
+# Default pattern for all other brands that don't have specific patterns defined
+aion:default:true
+aiways:default:true
+arcfox:default:true
+baic motor:default:true
+baojun:default:true
+bestune:default:true
+cowin:default:true
+dacia:default:true
+denza:default:true
+dongfeng motor:default:true
+enovate:default:true
+faw:default:true
+foton:default:true
+gac:default:true
+gmc:default:true
+haima:default:true
+higer:default:true
+jac:default:true
+jmc:default:true
+jetour:default:true
+karry:default:true
+lada:default:true
+leopaard:default:true
+lifan:default:true
+maple:default:true
+maserati:default:true
+maxus:default:true
+mg:default:true
+ora:default:true
+polestones:default:true
+ram:default:true
+roewe:default:true
+seres:default:true
+singulato:default:true
+skywell:default:true
+sokon:default:true
+soueast:default:true
+traum:default:true
+venucia:default:true
+wm motor:default:true
+wuling:default:true
+xiamen king long:default:true
+yutong:default:true
+zhidou:default:true
+zhongtong:default:true
+zotye:default:true

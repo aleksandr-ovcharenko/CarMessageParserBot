@@ -23,9 +23,24 @@ def parse_car_text(text: str, return_failures=False):
                 # Попробуем парсить без структуры
                 data, failed = _try_unstructured_specs_parse(text, brand_list)
                 if not data or data.get("brand") is None or not data.get("model"):
-                    # Крайний случай - попробуем полностью свободный формат
-                    data = parse_car_text_freeform(text, brand_list)
-                    failed = []  # мы не валим на ошибке в этом режиме
+                    # Используем улучшенный парсер бренда/модели
+                    first_line = text.splitlines()[0] if text.splitlines() else text
+                    brand, model, modifications = improved_brand_model_parse(first_line, brand_list)
+                    if brand and model:
+                        if not data:
+                            data = {}
+                        data["brand"] = brand
+                        data["model"] = model
+                        if modifications:
+                            if "description" not in data or not data["description"]:
+                                data["description"] = modifications
+                            else:
+                                data["description"] = modifications + ". " + data["description"]
+                        failed = []  # мы не валим на ошибке в этом режиме
+                    else:
+                        # Крайний случай - попробуем полностью свободный формат
+                        data = parse_car_text_freeform(text, brand_list)
+                        failed = []  # мы не валим на ошибке в этом режиме
     # --- API Ninjas fallback ---
     if (not data.get("brand") or not data.get("model")) and data.get("description"):
         try:
@@ -681,7 +696,7 @@ def _try_lynk_format_parse(text: str, brand_list: list[str]) -> tuple[dict, list
             match = re.search(pattern, line)
             if match:
                 try:
-                    mileage_str = match.group(1).strip()
+                    mileage_str = match.group(1)
                     result["mileage"] = clean_number(mileage_str)
                     break
                 except:
@@ -937,3 +952,217 @@ def _try_unstructured_specs_parse(text: str, brand_list: list[str]) -> tuple[dic
         result["model"] = "Неизвестно"
     
     return result, failed
+
+
+def load_model_patterns(filepath="models.txt") -> dict:
+    """
+    Load model patterns from a configuration file.
+    Returns a dictionary mapping brands to their model patterns.
+    
+    Format in the file:
+    brand:pattern_type:pattern_regex
+    """
+    model_patterns = {}
+    
+    with open(filepath, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+                
+            parts = line.split(':', 2)
+            if len(parts) == 3:
+                brand, pattern_type, pattern = parts
+                brand = brand.lower()
+                
+                if brand not in model_patterns:
+                    model_patterns[brand] = {}
+                    
+                if pattern_type not in model_patterns[brand]:
+                    model_patterns[brand][pattern_type] = []
+                    
+                model_patterns[brand][pattern_type].append(pattern)
+    
+    return model_patterns
+
+
+def improved_brand_model_parse(text: str, brand_list: list[str]) -> tuple[str, str, str]:
+    """
+    Enhanced parser that separates brand, model, and modifications.
+    Returns a tuple of (brand, model, modifications)
+    
+    Uses local logic to better identify the components:
+    - Brand is identified from the brand list
+    - Model is the core model name that follows the brand
+    - Modifications are additional descriptors, variants, trim levels, etc.
+    """
+    import re
+    brand_map = load_brand_map()
+    model_patterns = load_model_patterns()
+    
+    raw = text.strip()
+    raw_lower = raw.lower()
+    
+    # Clean the text by removing parenthetical phrases first
+    parentheses_content = []
+    clean_raw = raw
+    
+    # Extract all content in parentheses and save for later
+    parentheses_pattern = r'\([^)]+\)'
+    for match in re.finditer(parentheses_pattern, raw):
+        parentheses_content.append(match.group(0))
+        clean_raw = clean_raw.replace(match.group(0), ' ')
+    
+    # Remove emoji and special characters for cleaner parsing
+    clean_text = re.sub(r'[^\w\s\-\.]', ' ', clean_raw).strip()
+    # Remove extra spaces
+    clean_text = re.sub(r'\s+', ' ', clean_text)
+    
+    words = clean_text.split()
+    if not words:
+        return None, None, None
+        
+    # Step 1: Identify the brand
+    brand = None
+    model_start_idx = 0
+    
+    # Try to match full brand names first (longer matches first)
+    for b in sorted(brand_list, key=lambda x: -len(x)):
+        b_lower = b.lower()
+        if b_lower in raw_lower:
+            # Check if it's at the beginning or preceded only by noise
+            b_pos = raw_lower.find(b_lower)
+            prefix = raw_lower[:b_pos].strip()
+            if b_pos == 0 or not re.search(r'[a-zA-Z0-9]', prefix):
+                brand = brand_map.get(b_lower, b)
+                # Find where the model should start in the words list
+                model_start_idx = len(prefix.split()) + len(b.split())
+                break
+    
+    # If no brand found, try matching just the first word against brand names
+    if not brand and words:
+        first_word = words[0].lower()
+        if first_word in brand_map:
+            brand = brand_map[first_word]
+            model_start_idx = 1
+    
+    # If still no brand, try partial matching with first words
+    if not brand and words:
+        first_word = words[0].lower()
+        for b in brand_list:
+            b_parts = b.lower().split()
+            if b_parts and first_word == b_parts[0]:
+                brand = brand_map.get(b.lower(), b)
+                model_start_idx = 1
+                break
+    
+    if not brand:
+        return None, None, None
+    
+    # Step 2: Extract model and modifications
+    # Get remaining text after brand
+    remaining_words = words[model_start_idx:]
+    if not remaining_words:
+        return brand, "", ""
+    
+    # Normalize the brand name for pattern matching
+    brand_lower = brand.lower()
+    
+    # Try to find model using patterns from the configuration file
+    model = None
+    model_end_idx = 0
+    
+    # If brand has patterns defined
+    if brand_lower in model_patterns:
+        patterns = model_patterns[brand_lower]
+        joined_remaining = ' '.join(remaining_words)
+        
+        # Check if the brand uses default pattern
+        if 'default' in patterns:
+            # For default pattern, just take the first word as model
+            model = remaining_words[0]
+            model_end_idx = 1
+        else:
+            # Check for exact model names first
+            if 'model' in patterns:
+                for model_name in patterns['model']:
+                    model_name_lower = model_name.lower()
+                    if model_name_lower in joined_remaining.lower():
+                        # Find where in the words this model appears
+                        for i, word in enumerate(remaining_words):
+                            if model_name_lower in word.lower():
+                                model = model_name
+                                model_end_idx = i + 1  # Include this word
+                                break
+                        if model:
+                            break
+            
+            # If no model found yet, try series/class patterns
+            if not model and 'series_class' in patterns:
+                for pattern in patterns['series_class']:
+                    series_match = re.search(pattern, joined_remaining, re.IGNORECASE)
+                    if series_match:
+                        # Find which words contain this match
+                        match_position = series_match.start()
+                        match_end_position = series_match.end()
+                        
+                        # Count characters to find the words that contain the match
+                        start_idx = None
+                        end_idx = None
+                        char_count = 0
+                        
+                        for i, word in enumerate(remaining_words):
+                            next_char_count = char_count + len(word) + 1  # +1 for space
+                            if char_count <= match_position < next_char_count and start_idx is None:
+                                start_idx = i
+                            if char_count <= match_end_position < next_char_count:
+                                end_idx = i + 1  # +1 to include this word
+                                break
+                            char_count = next_char_count
+                        
+                        if start_idx is not None and end_idx is not None:
+                            model = ' '.join(remaining_words[start_idx:end_idx])
+                            model_end_idx = end_idx
+                            break
+            
+            # Try alphanumeric patterns
+            if not model and 'alphanumeric' in patterns:
+                for pattern in patterns['alphanumeric']:
+                    for i, word in enumerate(remaining_words[:2]):  # Only check first 2 words
+                        if re.match(pattern, word, re.IGNORECASE):
+                            model = word
+                            model_end_idx = i + 1  # Include this word
+                            break
+                    if model:
+                        break
+            
+            # Try prefix-number patterns (e.g., "RX 350")
+            if not model and 'prefix_number' in patterns and len(remaining_words) >= 2:
+                for pattern in patterns['prefix_number']:
+                    if re.match(pattern, remaining_words[0], re.IGNORECASE):
+                        model = remaining_words[0]
+                        model_end_idx = 1  # Just take the first word as model
+                        break
+    
+    # If no model found using patterns, use default approach
+    if not model:
+        # Default: first word is model
+        model = remaining_words[0]
+        model_end_idx = 1
+    
+    # Get modifications - everything after the model
+    modifications = ' '.join(remaining_words[model_end_idx:])
+    
+    # Clean up model and modifications
+    model = model.strip()
+    modifications = modifications.strip()
+    
+    # Add previously extracted parenthetical content to modifications, 
+    # except if they contain words like "импорт" (import)
+    for content in parentheses_content:
+        # Skip import-related parenthetical content
+        if "импорт" in content.lower() or "import" in content.lower():
+            continue
+        modifications = (modifications + " " + content).strip()
+    
+    return brand, model, modifications
