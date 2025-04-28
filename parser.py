@@ -202,6 +202,7 @@ def parse_car_text_freeform(text: str, brand_list: list[str]) -> dict:
 
 def _try_structured_parse(text: str, brand_list: list[str]) -> tuple[dict, list[str]]:
     brand_model_pattern = r"(?:Бренд|Марка):\s*(.+)"
+    model_line_pattern = r"(?:Модель):\s*(.+)"  # Added pattern for "Модель:" line
     engine_pattern = r"Двигатель:\s*(.+)"
     patterns = {
         "price": r"Цена.*?:\s*([\d\s.,$]+)",
@@ -220,6 +221,14 @@ def _try_structured_parse(text: str, brand_list: list[str]) -> tuple[dict, list[
         brand, model = detect_brand_and_model(full, brand_list)
         result["brand"] = brand
         result["model"] = model
+        
+        # Special handling for "Бренд:" + "Модель:" format where Model line contains modifications
+        model_match = re.search(model_line_pattern, text, re.IGNORECASE)
+        if model_match:
+            # If we have a "Модель:" line, use its content as modification
+            modification = model_match.group(1).strip()
+            if modification:
+                result["modification"] = modification
     else:
         failed.append("brand/model")
 
@@ -307,87 +316,52 @@ def _try_emoji_format_parse(text: str, brand_list: list[str]) -> tuple[dict, lis
     # Разделяем на строки и убираем пустые
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     
-    # Ищем строки с названием модели (обычно в начале)
-    brand_model_line = None
+    # Gather car-related information from first few lines
+    car_info_lines = []
+    found_specific_section = False
     
-    # Специальная проверка для Mercedes и других строк в формате "BRAND MODEL CLASS YEAR"
-    for i, line in enumerate(lines[:5]):  # Проверяем первые 5 строк
-        # Особая проверка для Mercedes формата
-        if "MERCEDES" in line or "BENZ" in line:
-            brand_model_line = line
+    # Check first few lines for car information
+    for i, line in enumerate(lines[:5]):
+        # Skip if we've already found a section marker
+        if found_specific_section:
             break
             
-        # Проверка для линий с эмодзи автомобиля
-        if "🚗" in line or "🚙" in line or "🚘" in line:
-            brand_model_line = line
+        # Stop collecting if we hit a specific section
+        if any(pattern in line.lower() for pattern in ["год:", "пробег:", "двс:", "трансмиссия:", "привод:", "цена:"]):
+            found_specific_section = True
             break
-        
-        # Общая проверка на любой бренд из списка
-        for brand in brand_list:
-            if brand.lower() in line.lower():
-                brand_model_line = line
-                break
-                
-        if brand_model_line:
-            break
-    
-    # Если нашли строку с брендом и моделью
-    if brand_model_line:
-        # Очищаем строку от эмодзи и других символов
-        clean_brand_model = re.sub(r'[^\w\s]', ' ', brand_model_line)
-        # Удаляем китайские иероглифы и другие не-ASCII символы
-        clean_brand_model = re.sub(r'[^\x00-\x7F]+', ' ', clean_brand_model)
-        clean_brand_model = re.sub(r'\s+', ' ', clean_brand_model).strip()
-        
-        # Пробуем найти Mercedes-специфичный формат (MERCEDES BENZ C CLASS 2016)
-        if "MERCEDES" in clean_brand_model or "BENZ" in clean_brand_model:
-            # Выделяем год, если он есть
-            year_in_name = re.search(r'(20\d{2})', clean_brand_model)
-            if year_in_name:
-                result["year"] = int(year_in_name.group(1))
-                # Убираем год из строки
-                clean_brand_model = re.sub(r'20\d{2}', '', clean_brand_model).strip()
             
-            parts = clean_brand_model.split()
-            if len(parts) >= 2:
-                # Для Mercedes обычно формат: MERCEDES BENZ C CLASS
-                result["brand"] = "Mercedes-Benz"
-                
-                # Определяем модель: все после "BENZ" или "MERCEDES"
-                if "BENZ" in parts:
-                    benz_index = parts.index("BENZ")
-                    result["model"] = " ".join(parts[benz_index + 1:]).lower()
-                else:
-                    merc_index = parts.index("MERCEDES")
-                    if merc_index + 1 < len(parts):
-                        result["model"] = " ".join(parts[merc_index + 1:]).lower()
-                    else:
-                        result["model"] = ""
-            else:
-                result["brand"] = "Mercedes-Benz"
-                result["model"] = ""
-        # Особая обработка для BYD моделей
-        elif "BYD" in clean_brand_model:
-            result["brand"] = "BYD"
-            # Ищем модель после "BYD"
-            parts = clean_brand_model.split()
-            if len(parts) > 1 and parts[0].upper() == "BYD":
-                # Берем только английские названия (Song, Pro и т.д.)
-                model_parts = []
-                for part in parts[1:]:
-                    if re.match(r'^[a-zA-Z0-9]+$', part):  # Только ASCII буквы и цифры
-                        model_parts.append(part)
-                result["model"] = " ".join(model_parts).lower()
-            else:
-                result["model"] = ""
-        else:
-            # Стандартная обработка для других брендов
-            brand, model = detect_brand_and_model(clean_brand_model, brand_list)
+        # Clean line from emojis and other symbols
+        clean_line = re.sub(r'[^\w\s]', ' ', line)
+        clean_line = re.sub(r'[^\x00-\x7F]+', ' ', clean_line)  # Remove non-ASCII
+        clean_line = re.sub(r'\s+', ' ', clean_line).strip()
+        
+        if clean_line:
+            car_info_lines.append(clean_line)
+    
+    # Combine all car info lines
+    if car_info_lines:
+        combined_car_info = " ".join(car_info_lines)
+        
+        # Now use improved_brand_model_parse to extract brand, model, and modifications
+        brand, model, modification = improved_brand_model_parse(combined_car_info, brand_list)
+        
+        if brand:
             result["brand"] = brand
+        else:
+            failed.append("brand")
+            
+        if model:
             result["model"] = model
+        else:
+            failed.append("model")
+            
+        if modification:
+            result["modification"] = modification
     else:
         failed.append("brand/model")
     
+    # Continue with the rest of the parsing for other fields (year, mileage, engine, etc.)
     # Год выпуска (Год: XX/XXXX или просто XXXX)
     if "year" not in result:  # Проверяем, не был ли год найден ранее
         year_pattern = r"[Гг]од:?\s*(?:\d+[\/\.])?(\d{4})"
@@ -426,13 +400,13 @@ def _try_emoji_format_parse(text: str, brand_list: list[str]) -> tuple[dict, lis
             raw_engine = match.group(1).strip()
             val, extra = split_engine_and_description(raw_engine)
             result["engine"] = val
-            # Добавляем остаток в описание
+            # Добавляем остаток в description
             if extra and "description" not in result:
                 result["description"] = extra
             break
     
     # Трансмиссия: АКПП/МКПП/DSG/CVT/DCT и т.д.
-    transmission_pattern = r"(?:АКПП|КПП|трансмиссия):?\s*(.+)"
+    transmission_pattern = r"(?:АКПП|КПП|трансмиссия):?\s*[-:]\s*([^,\n\r]+)"
     for line in lines:
         match = re.search(transmission_pattern, line)
         if match:
@@ -440,7 +414,7 @@ def _try_emoji_format_parse(text: str, brand_list: list[str]) -> tuple[dict, lis
             break
     
     # Привод: Полный/Передний/Задний/4WD/AWD и т.д.
-    drive_pattern = r"(?:Привод):?\s*(.+)"
+    drive_pattern = r"[Пп]ривод:?\s*(.+)"
     for line in lines:
         match = re.search(drive_pattern, line)
         if match:
@@ -485,7 +459,7 @@ def _try_emoji_format_parse(text: str, brand_list: list[str]) -> tuple[dict, lis
                 continue
                 
             # Пропускаем строки, которые похожи на заголовок с брендом/моделью
-            if line == brand_model_line:
+            if car_info_lines and line == car_info_lines[0]:
                 continue
                 
             cleaned_line = re.sub(r'[^\w\s]', ' ', line)  # Убираем эмодзи и символы
@@ -549,10 +523,11 @@ def _try_lynk_format_parse(text: str, brand_list: list[str]) -> tuple[dict, list
         if model_match:
             result["model"] = model_match.group(1)
             
-            # Ищем дополнительную информацию о модели (MHEV, PHEV и т.д.)
+            # Extract modifications (everything after the model number)
             model_info = re.sub(r'Lynk\s*&?\s*Co\s+\d+\s*', '', first_line, flags=re.IGNORECASE).strip()
             if model_info:
-                result["model"] += " " + model_info
+                # Store the modification information separately
+                result["modification"] = model_info
         else:
             result["model"] = re.sub(r'Lynk\s*&?\s*Co\s*', '', first_line, flags=re.IGNORECASE).strip()
     else:
@@ -641,7 +616,7 @@ def _try_lynk_format_parse(text: str, brand_list: list[str]) -> tuple[dict, list
             
     # Поиск трансмиссии
     transmission_patterns = [
-        r"(?:АКПП|КПП|трансмиссия)\s*[-:]\s*([^,\n\r]+)",
+        r"(?:АКПП|КПП|трансмиссия):?\s*[-:]\s*([^,\n\r]+)",
         r"(?:АКПП|КПП|трансмиссия)\s+([^,\n\r]+)"
     ]
     

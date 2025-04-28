@@ -8,7 +8,7 @@ from pyrogram import Client, filters
 from pyrogram.types import Message
 
 from config import ALLOWED_USERS, API_TOKEN, API_ID, API_HASH, BOT_TOKEN
-from parser import parse_car_text, improved_brand_model_parse, load_brand_list
+from parser import parse_car_text, load_brand_list
 from utils import send_to_api
 from api_ninjas import get_car_info_from_ninjas
 
@@ -79,61 +79,25 @@ async def process_session(message: Message, session: dict):
         # Only use parse_car_text, which handles Ninja fallback internally
         car_data, failed_keys = parse_car_text(caption, return_failures=True)
 
-        # Now, use the improved_brand_model_parse for extracting car_data
-        raw_text = caption.strip()
-        brand_list = load_brand_list()
-        
-        # First line often contains the core car info
-        first_line = raw_text.splitlines()[0] if raw_text.splitlines() else raw_text
-        brand, model, modifications = improved_brand_model_parse(first_line, brand_list)
-        
-        # If we didn't get a brand/model from the first line, try with the whole text
-        if not brand or not model:
-            brand, model, modifications = improved_brand_model_parse(raw_text, brand_list)
-        
-        # Fallback to the values in car_data if needed
-        brand = brand or car_data.get("brand", "")
-        model = model or car_data.get("model", "")
-        
-        # Build modification parts
-        modification_parts = []
-        
-        # Add engine info to modification if available
-        if engine := car_data.get("engine", ""):
-            modification_parts.append(engine)
-            
-        # Add the extracted modifications if they're not already included in the engine info
-        if modifications and modifications.strip():
-            # Check if modifications are already in engine
-            engine_lower = engine.lower() if engine else ""
-            if engine_lower and modifications.lower() not in engine_lower:
-                modification_parts.append(modifications)
-            elif not engine:
-                modification_parts.append(modifications)
-        
-        # Create the full modification string
-        full_modification = " ".join(modification_parts).strip()
-        
-        # Add the modification field separately - important for the API
-        car_data["modification"] = full_modification
-        
-        # Add the formatted car_data string for the new parser
-        car_data_str = f"{brand} {model} {full_modification}".strip()
+        # Extract the brand, model, and modification from car_data
+        brand = car_data.get("brand", "")
+        model = car_data.get("model", "")
+        modification = car_data.get("modification", "")
+
+        # Construct car_data string in the required format
+        car_data_str = f"{brand} {model} {modification}".strip()
         car_data["car_data"] = car_data_str
-        
-        # Update brand and model in car_data to match what we extracted
-        car_data["brand"] = brand
-        car_data["model"] = model
-        
+
         # Log the extracted car_data string
         print(f"[DEBUG] Extracted car_data string: {car_data_str}")
-        print(f"[DEBUG] Actual fields: brand='{brand}', model='{model}', modification='{full_modification}'")
+        print(f"[DEBUG] Actual fields: brand='{brand}', model='{model}', modification='{modification}'")
+        print(f"[DEBUG] Engine: '{car_data.get('engine', '')}'")
 
         print("[REQUEST DATA]", json.dumps(car_data, ensure_ascii=False, indent=2))
 
         # Add image file_ids to car_data
         car_data["image_file_ids"] = images
-        
+
         # Create a list to store image URLs
         image_urls = []
 
@@ -143,13 +107,13 @@ async def process_session(message: Message, session: dict):
                 # Construct the URL directly using the BOT_TOKEN and file_id
                 # This avoids the need to call get_file which seems to be failing
                 url = f"https://api.telegram.org/bot{BOT_TOKEN}/getFile?file_id={fid}"
-                
+
                 # Let's just log the file_id and avoid connecting to Telegram's API in this step
                 print(f"[PHOTO {idx}] file_id: {fid}")
-                
+
                 # Add the file_id as URL since that's what most APIs accept
                 image_urls.append(fid)
-                
+
             except Exception as e:
                 print(f"[ERROR] Failed to process photo {idx}: {str(e)}")
 
@@ -157,7 +121,7 @@ async def process_session(message: Message, session: dict):
         # The API should handle downloading these from Telegram
         car_data["image_urls"] = image_urls
         print(f"[DEBUG] Added {len(image_urls)} image IDs to be processed by API")
-        
+
         # Log the final payload before sending to API
         print("[FINAL PAYLOAD]", json.dumps({k: v for k, v in car_data.items() 
                                           if k not in ['image_file_ids', 'image_urls']}, 
@@ -178,16 +142,16 @@ async def process_session(message: Message, session: dict):
 
             msg = f"✅ Автомобиль успешно импортирован!\n"
             msg += f"🆔 ID: `{data.get('car_id', '—')}`\n"
-            
+
             # Format the car brand, model and year properly
             brand = data.get('brand', '')
             model = data.get('model', '')
             year = data.get('year')
-            
+
             # Only include year in parentheses if it's a valid non-zero value
             year_display = f" ({year})" if year and year != 0 and year != "0" and year != "" else ""
             msg += f"🚘 {brand} {model}{year_display}\n"
-            
+
             msg += f"💰 Цена: {data.get('price', '—')}\n"
 
             if data.get("main_image"):
