@@ -1036,7 +1036,7 @@ def improved_brand_model_parse(text: str, brand_list: list[str]) -> tuple[str, s
     words = clean_text.split()
     if not words:
         return "", "", ""
-    
+        
     # Step 1: Identify the brand
     brand = None
     model_start_idx = 0
@@ -1049,16 +1049,16 @@ def improved_brand_model_parse(text: str, brand_list: list[str]) -> tuple[str, s
             b_pos = raw_lower.find(b_lower)
             prefix = raw_lower[:b_pos].strip()
             if b_pos == 0 or not re.search(r'[a-zA-Z0-9]', prefix):
-                brand = brand_map.get(b_lower, b)
+                # Use the proper case from brand_map here
+                brand = b  # Use the original case from brand_list
                 # Find where the model should start in the words list
                 model_start_idx = len(prefix.split()) + len(b.split())
                 break
-    
     # If no brand found, try matching just the first word against brand names
     if not brand and words:
         first_word = words[0].lower()
         if first_word in brand_map:
-            brand = brand_map[first_word]
+            brand = brand_map[first_word]  # This uses proper case from brand_map
             model_start_idx = 1
     
     # If still no brand, try partial matching with first words
@@ -1067,7 +1067,7 @@ def improved_brand_model_parse(text: str, brand_list: list[str]) -> tuple[str, s
         for b in brand_list:
             b_parts = b.lower().split()
             if b_parts and first_word == b_parts[0]:
-                brand = brand_map.get(b.lower(), b)
+                brand = b  # Use original case from brand_list
                 model_start_idx = 1
                 break
     
