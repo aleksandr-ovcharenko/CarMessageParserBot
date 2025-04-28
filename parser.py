@@ -176,20 +176,21 @@ def load_brand_map(filepath="brands.txt") -> dict:
                 continue
                 
             # Split by commas, and clean each part
-            parts = [p.strip().lower() for p in line.split(",")]
+            parts = [p.strip() for p in line.split(",")]  # Keep original case for the canonical brand
             if not parts:
                 continue
                 
-            canonical = parts[0]  # First part is the canonical brand
+            canonical = parts[0]  # First part is the canonical brand (proper case)
             
-            # Map each variant to the canonical brand
+            # Map each variant (lowercase) to the canonical brand (proper case)
             for variant in parts:
-                if variant not in brand_map:  # First occurrence wins
-                    brand_map[variant] = canonical
+                variant_lower = variant.lower()
+                if variant_lower not in brand_map:  # First occurrence wins
+                    brand_map[variant_lower] = canonical  # Store original case
     except Exception as e:
         print(f"Error loading brand map: {e}")
         # Return a mapping from each brand to itself if file can't be loaded
-        brand_map = {b.lower(): b for b in brand_list}
+        brand_map = {b.lower(): b for b in brand_list}  # Preserve original case
         
     return brand_map
 
