@@ -1,4 +1,5 @@
 import re
+from collections import defaultdict
 
 
 def clean_number(val):
@@ -31,15 +32,15 @@ def parse_car_text(text: str, return_failures=False):
                             data = {}
                         data["brand"] = brand
                         data["model"] = model
+                        
+                        # Process modifications to separate trim and other modifications
                         if modifications:
-                            if "description" not in data or not data["description"]:
-                                data["description"] = modifications
-                            else:
-                                data["description"] = modifications + ". " + data["description"]
-                        failed = []  # мы не валим на ошибке в этом режиме
-                    else:
-                        # Крайний случай - попробуем полностью свободный формат
-                        data = parse_car_text_freeform(text, brand_list)
+                            trim_and_mods = separate_trim_from_modifications(modifications)
+                            if trim_and_mods.get("trim"):
+                                data["trim"] = trim_and_mods["trim"]
+                            if trim_and_mods.get("modification"):
+                                data["modification"] = trim_and_mods["modification"]
+                            
                         failed = []  # мы не валим на ошибке в этом режиме
     # --- API Ninjas fallback ---
     if (not data.get("brand") or not data.get("model")) and data.get("description"):
@@ -66,7 +67,38 @@ def detect_brand_and_model(raw_string: str, brand_list: list[str]) -> tuple[str,
     Для строк типа 'Марка: BRAND MODEL (extra)' модель = MODEL (до скобки).
     Для 'Модель:' строк модель = полная строка.
     """
-    import re
+    # Default return values
+    brand = ""
+    model = ""
+    
+    # Handling "Марка:" format
+    if "Марка:" in raw_string or "Бренд:" in raw_string:
+        # Split by colon
+        parts = re.split(r'[:：]', raw_string, 1)
+        if len(parts) > 1:
+            brand_model = parts[1].strip()
+            return detect_brand_and_model(brand_model, brand_list)
+    
+    # Handle "Модель:" format differently
+    if raw_string.strip().startswith("Модель:"):
+        # For "Модель:" lines, consider everything after the colon as the model
+        parts = re.split(r'[:：]', raw_string, 1)
+        if len(parts) > 1:
+            model = parts[1].strip()
+            # Try to find a brand within the model
+            for b in sorted(brand_list, key=len, reverse=True):
+                if b.lower() in model.lower():
+                    brand = b
+                    # Remove brand from model
+                    model = re.sub(r'(?i)\b' + re.escape(b) + r'\b', '', model).strip()
+                    break
+            return brand, model
+    
+    # Normal processing for other formats
+    words = raw_string.split()
+    if not words:
+        return "", ""
+    
     brand_map = load_brand_map()
     raw = raw_string.strip()
     raw_lower = raw.lower()
@@ -132,20 +164,33 @@ def load_brand_list(filepath="brands.txt") -> list[str]:
 def load_brand_map(filepath="brands.txt") -> dict:
     """Returns a mapping from each synonym/variant to canonical brand (first occurrence wins)."""
     brand_map = {}
-    with open(filepath, encoding="utf-8") as f:
-        for line in f:
+    brand_list = load_brand_list(filepath)
+    
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            
+        for line in lines:
             line = line.strip()
-            if not line or line.startswith('#'):
+            if not line or line.startswith("#"):
                 continue
-            if '=' in line:
-                left, right = [x.strip() for x in line.split('=', 1)]
-                if left.lower() not in brand_map:
-                    brand_map[left.lower()] = right
-                if right.lower() not in brand_map:
-                    brand_map[right.lower()] = right
-            else:
-                if line.lower() not in brand_map:
-                    brand_map[line.lower()] = line
+                
+            # Split by commas, and clean each part
+            parts = [p.strip().lower() for p in line.split(",")]
+            if not parts:
+                continue
+                
+            canonical = parts[0]  # First part is the canonical brand
+            
+            # Map each variant to the canonical brand
+            for variant in parts:
+                if variant not in brand_map:  # First occurrence wins
+                    brand_map[variant] = canonical
+    except Exception as e:
+        print(f"Error loading brand map: {e}")
+        # Return a mapping from each brand to itself if file can't be loaded
+        brand_map = {b.lower(): b for b in brand_list}
+        
     return brand_map
 
 
@@ -274,29 +319,6 @@ def _try_structured_parse(text: str, brand_list: list[str]) -> tuple[dict, list[
 
     return result, failed
 
-
-
-def detect_currency(line: str) -> str:
-    line = line.lower()
-    if "$" in line or "usd" in line:
-        return "USD"
-    elif "₽" in line or "руб" in line:
-        return "RUB"
-    elif "¥" in line or "йен" in line or "jpy" in line:
-        return "JPY"
-    return "unknown"
-
-def split_engine_and_description(engine_str: str) -> tuple[str, str]:
-    """
-    Делит строку двигателя на основную часть и хвост после "л.с." или "kWh"
-    """
-    pattern = r"(.*?(?:л\.с\.|kWh))\s*[,;:\-–]?\s*(.*)"
-    match = re.match(pattern, engine_str, re.IGNORECASE)
-    if match:
-        main = match.group(1).strip()
-        extra = match.group(2).strip()
-        return main, extra
-    return engine_str.strip(), ""
 
 
 def _try_emoji_format_parse(text: str, brand_list: list[str]) -> tuple[dict, list[str]]:
@@ -469,7 +491,11 @@ def _try_emoji_format_parse(text: str, brand_list: list[str]) -> tuple[dict, lis
                 desc_lines.append(cleaned_line)
         
         if desc_lines:
-            result["description"] = " ".join(desc_lines)
+            description = " | ".join(desc_lines)
+            if "description" in result:
+                result["description"] += " | " + description
+            else:
+                result["description"] = description
     
     # Определяем список не найденных полей
     if "brand" not in result:
@@ -937,26 +963,39 @@ def load_model_patterns(filepath="models.txt") -> dict:
     Format in the file:
     brand:pattern_type:pattern_regex
     """
-    model_patterns = {}
+    model_patterns = defaultdict(dict)
     
-    with open(filepath, encoding="utf-8") as f:
-        for line in f:
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            
+        for line in lines:
             line = line.strip()
-            if not line or line.startswith('#'):
+            if not line or line.startswith("#"):
                 continue
                 
-            parts = line.split(':', 2)
-            if len(parts) == 3:
-                brand, pattern_type, pattern = parts
-                brand = brand.lower()
+            parts = line.split(":", 2)  # Split into at most 3 parts
+            if len(parts) < 2:
+                continue
                 
-                if brand not in model_patterns:
-                    model_patterns[brand] = {}
+            brand = parts[0].lower()
+            pattern_type = parts[1]
+            
+            # Handle the 'default' pattern type (a flag rather than a pattern)
+            if pattern_type == "default":
+                model_patterns[brand]["default"] = True
+                continue
+                
+            # Get the pattern regex if provided
+            pattern = parts[2] if len(parts) > 2 else ""
+            
+            # Initialize the pattern type if not already in the dict
+            if pattern_type not in model_patterns[brand]:
+                model_patterns[brand][pattern_type] = []
                     
-                if pattern_type not in model_patterns[brand]:
-                    model_patterns[brand][pattern_type] = []
-                    
-                model_patterns[brand][pattern_type].append(pattern)
+            model_patterns[brand][pattern_type].append(pattern)
+    except Exception as e:
+        print(f"Error loading model patterns: {e}")
     
     return model_patterns
 
@@ -995,8 +1034,8 @@ def improved_brand_model_parse(text: str, brand_list: list[str]) -> tuple[str, s
     
     words = clean_text.split()
     if not words:
-        return None, None, None
-        
+        return "", "", ""
+    
     # Step 1: Identify the brand
     brand = None
     model_start_idx = 0
@@ -1046,11 +1085,12 @@ def improved_brand_model_parse(text: str, brand_list: list[str]) -> tuple[str, s
     # Try to find model using patterns from the configuration file
     model = None
     model_end_idx = 0
+    brand_lower = ""  # Initialize brand_lower with a default value
     
-    # If brand has patterns defined
-    if brand_lower in model_patterns:
+    # If brand has patterns defined and we have a valid brand
+    if brand and brand.lower() in model_patterns:
+        brand_lower = brand.lower()
         patterns = model_patterns[brand_lower]
-        joined_remaining = ' '.join(remaining_words)
         
         # Check if the brand uses default pattern
         if 'default' in patterns:
@@ -1062,7 +1102,7 @@ def improved_brand_model_parse(text: str, brand_list: list[str]) -> tuple[str, s
             if 'model' in patterns:
                 for model_name in patterns['model']:
                     model_name_lower = model_name.lower()
-                    if model_name_lower in joined_remaining.lower():
+                    if model_name_lower in ' '.join(remaining_words).lower():
                         # Find where in the words this model appears
                         for i, word in enumerate(remaining_words):
                             if model_name_lower in word.lower():
@@ -1075,7 +1115,7 @@ def improved_brand_model_parse(text: str, brand_list: list[str]) -> tuple[str, s
             # If no model found yet, try series/class patterns
             if not model and 'series_class' in patterns:
                 for pattern in patterns['series_class']:
-                    series_match = re.search(pattern, joined_remaining, re.IGNORECASE)
+                    series_match = re.search(pattern, ' '.join(remaining_words), re.IGNORECASE)
                     if series_match:
                         # Find which words contain this match
                         match_position = series_match.start()
@@ -1125,19 +1165,111 @@ def improved_brand_model_parse(text: str, brand_list: list[str]) -> tuple[str, s
         model = remaining_words[0]
         model_end_idx = 1
     
-    # Get modifications - everything after the model
-    modifications = ' '.join(remaining_words[model_end_idx:])
+    # Extract modifications, but exclude certain patterns
+    if len(remaining_words) > model_end_idx:
+        # These are patterns that should NOT be included in the modification
+        exclude_patterns = [
+            r'(?:\d+)?\s*(?:места|мест|seat(?:er|s)?)',  # Seating info like "7 мест" or "7 seater"
+            r'\d+\s*л\.?с\.?',  # Engine power like "220 л.с." or "220 лс"
+            r'\d+\s*hp',  # Engine power in hp
+            r'\d+\s*kw',  # Engine power in kW
+        ]
+        
+        mod_candidates = remaining_words[model_end_idx:]
+        filtered_mods = []
+        
+        # Join the remaining words for easier pattern matching
+        mod_text = ' '.join(mod_candidates)
+        
+        # Remove excluded patterns
+        for pattern in exclude_patterns:
+            mod_text = re.sub(pattern, '', mod_text, flags=re.IGNORECASE)
+        
+        # Clean up resulting string
+        mod_text = re.sub(r'\s+', ' ', mod_text).strip()
+        
+        return brand, model, mod_text
     
-    # Clean up model and modifications
-    model = model.strip()
-    modifications = modifications.strip()
+    return brand, model, ""
+
+
+def separate_trim_from_modifications(text: str) -> dict:
+    """
+    Separates trim level from other modifications.
+    Returns a dictionary with 'trim' and 'modification' keys.
+    """
+    result = {}
+    text = text.strip()
     
-    # Add previously extracted parenthetical content to modifications, 
-    # except if they contain words like "импорт" (import)
-    for content in parentheses_content:
-        # Skip import-related parenthetical content
-        if "импорт" in content.lower() or "import" in content.lower():
-            continue
-        modifications = (modifications + " " + content).strip()
+    if not text:
+        return result
     
-    return brand, model, modifications
+    # Trim words (usually appear as a distinct package name)
+    trim_patterns = [
+        r'(flagship|premium|luxury|sport|s-?line|m-?sport|avantgarde|amg|f-?sport|lounge|style|exclusive)',
+        r'(edition|line|package|collection|limited)',
+        r'(comfort|elegance|ambition|active|scout|rs|gt|fr)'
+    ]
+    
+    # Find trim in the text
+    trim = ""
+    for pattern in trim_patterns:
+        matches = re.finditer(pattern, text.lower())
+        for match in matches:
+            trim_match = match.group(0)
+            if trim_match:
+                trim = trim_match.upper()
+                # Remove the trim from the text
+                text = re.sub(re.escape(match.group(0)), '', text, flags=re.IGNORECASE)
+                break
+        if trim:
+            break
+    
+    # Clean up remaining modifications
+    modifications = re.sub(r'\s+', ' ', text).strip()
+    
+    # Exclude specific patterns from modifications
+    exclude_patterns = [
+        r'(?:\d+)?\s*(?:места|мест|seat(?:er|s)?)',  # Seating info
+        r'\d+\s*(?:л\.?с\.?|hp|kw|ps)',              # Engine power
+        r'[а-яА-Я]+',                                # Russian text (except for trim terms)
+    ]
+    
+    # Remove excluded patterns from modifications
+    for pattern in exclude_patterns:
+        modifications = re.sub(pattern, '', modifications, flags=re.IGNORECASE)
+    
+    # Clean up again
+    modifications = re.sub(r'\s+', ' ', modifications).strip()
+    
+    # Store results
+    if trim:
+        result["trim"] = trim
+    
+    if modifications:
+        result["modification"] = modifications
+    
+    return result
+
+
+def detect_currency(line: str) -> str:
+    line = line.lower()
+    if "$" in line or "usd" in line:
+        return "USD"
+    elif "₽" in line or "руб" in line:
+        return "RUB"
+    elif "¥" in line or "йен" in line or "jpy" in line:
+        return "JPY"
+    return "unknown"
+
+def split_engine_and_description(engine_str: str) -> tuple[str, str]:
+    """
+    Делит строку двигателя на основную часть и хвост после "л.с." или "kWh"
+    """
+    pattern = r"(.*?(?:л\.с\.|kWh))\s*[,;:\-–]?\s*(.*)"
+    match = re.match(pattern, engine_str, re.IGNORECASE)
+    if match:
+        main = match.group(1).strip()
+        extra = match.group(2).strip()
+        return main, extra
+    return engine_str.strip(), ""
