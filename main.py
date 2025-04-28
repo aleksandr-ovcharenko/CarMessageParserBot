@@ -107,6 +107,19 @@ async def process_session(message: Message, session: dict):
         car_data["image_urls"] = image_urls
         print(f"[DEBUG] Added {len(image_urls)} image IDs to be processed by API")
 
+        # Create the car_data string in [Brand] [Model] [Modification] format for the new parser
+        brand = car_data.get("brand", "")
+        model = car_data.get("model", "")
+        
+        # Extract engine and other modification information
+        modification_parts = []
+        if engine := car_data.get("engine", ""):
+            modification_parts.append(engine)
+        
+        # Add the formatted car_data string for the new parser
+        car_data["car_data"] = f"{brand} {model} {' '.join(modification_parts)}".strip()
+        print(f"[DEBUG] Added car_data string: {car_data['car_data']}")
+
         logging.info(f"[DEBUG] Using API token: {API_TOKEN}")
 
         response = send_to_api(car_data)
