@@ -1,16 +1,14 @@
 import asyncio
 import json
 import logging
-import re
 from collections import defaultdict
 
 from pyrogram import Client, filters
 from pyrogram.types import Message
 
 from config import ALLOWED_USERS, API_TOKEN, API_ID, API_HASH, BOT_TOKEN
-from parser import parse_car_text, load_brand_list
+from parser import parse_car_text
 from utils import send_to_api
-from api_ninjas import get_car_info_from_ninjas
 
 # Configure logging
 logging.basicConfig(
@@ -98,6 +96,9 @@ async def process_session(message: Message, session: dict):
         # Add image file_ids to car_data
         car_data["image_file_ids"] = images
 
+        # Add chat_id to payload for server-side async handling
+        car_data["chat_id"] = message.chat.id
+
         # Create a list to store image URLs
         image_urls = []
 
@@ -117,77 +118,141 @@ async def process_session(message: Message, session: dict):
             except Exception as e:
                 print(f"[ERROR] Failed to process photo {idx}: {str(e)}")
 
-        # Add the original file IDs as the image data
+        # Add image URLs to car_data
         # The API should handle downloading these from Telegram
         car_data["image_urls"] = image_urls
         print(f"[DEBUG] Added {len(image_urls)} image IDs to be processed by API")
 
         # Log the final payload before sending to API
-        print("[FINAL PAYLOAD]", json.dumps({k: v for k, v in car_data.items() 
-                                          if k not in ['image_file_ids', 'image_urls']}, 
-                                         ensure_ascii=False, indent=2))
+        print("[FINAL PAYLOAD]", json.dumps({k: v for k, v in car_data.items()
+                                             if k not in ['image_file_ids', 'image_urls']},
+                                            ensure_ascii=False, indent=2))
 
         logging.info(f"[DEBUG] Using API token: {API_TOKEN}")
 
-        response = send_to_api(car_data)
+        # Send immediate confirmation to user with the parsed data
+        human_readable = format_car_data_for_human(car_data)
+        await message.reply(
+            f"✅ Получены данные о автомобиле. Отправляю запрос на сервер...\n\n"
+            f"{human_readable}\n\n"
+            f"Пожалуйста, подождите. Я сообщу о результате обработки."
+        )
 
-        if response.ok:
+        # Start async task to send data to API and handle response
+        asyncio.create_task(send_api_request_and_notify(message, car_data))
+
+    except Exception as e:
+        print(f"[ERROR] Failed to process: {str(e)}")
+        await message.reply(f"⚠️ Ошибка при обработке: {str(e)}")
+
+
+async def send_api_request_and_notify(message, car_data):
+    """Sends request to API and notifies user about result"""
+    try:
+        # Send to API
+        response = await send_to_api(car_data, API_TOKEN)
+        
+        # Process response - expected to be immediate acknowledgment first
+        if response.status_code >= 200 and response.status_code < 300:
             try:
                 data = response.json()
-            except Exception:
-                data = {}
+                
+                # Handle the new "received" status format
+                if data.get("status") == "received":
+                    # The server has received the request and will process it asynchronously
+                    # No need to send additional message since we already sent the initial confirmation
+                    print(f"[API] Request received by server: {data.get('message', '')}")
+                    # Server will send follow-up notification directly to the user's chat
+                    return
+                
+                # If we get a full response (legacy or direct processing), handle it
+                msg = f"✅ Автомобиль успешно импортирован!\n"
+                msg += f"🆔 ID: `{data.get('car_id', '—')}`\n"
 
-            parsed_fields = [k for k in car_data if k != "image_file_ids"]
-            failed_fields = failed_keys if failed_keys else []
+                # Format the car brand, model and year properly
+                brand = data.get('brand', '')
+                model = data.get('model', '')
+                year = data.get('year', '')
 
-            msg = f"✅ Автомобиль успешно импортирован!\n"
-            msg += f"🆔 ID: `{data.get('car_id', '—')}`\n"
+                # Only include year in parentheses if it's a valid non-zero value
+                year_display = f" ({year})" if year and year != 0 and year != "0" and year != "" else ""
+                msg += f"🚘 {brand} {model}{year_display}\n"
 
-            # Format the car brand, model and year properly
-            brand = data.get('brand', '')
-            model = data.get('model', '')
-            year = data.get('year')
+                msg += f"💰 Цена: {data.get('price', '—')}\n"
 
-            # Only include year in parentheses if it's a valid non-zero value
-            year_display = f" ({year})" if year and year != 0 and year != "0" and year != "" else ""
-            msg += f"🚘 {brand} {model}{year_display}\n"
+                if data.get("main_image"):
+                    msg += f"🖼 Главное изображение готово ✅\n"
 
-            msg += f"💰 Цена: {data.get('price', '—')}\n"
+                msg += f"📸 Галерея: {data.get('gallery_images_count', 0)} фото\n"
+                
+                # Add URLs if provided
+                if car_url := data.get("car_url"):
+                    msg += f"\n🔗 Ссылка на сайт:\n{car_url}\n"
+                if admin_url := data.get("admin_edit_url"):
+                    msg += f"\n🛠 Редактировать в админке:\n{admin_url}\n"
 
-            if data.get("main_image"):
-                msg += f"🖼 Главное изображение готово ✅\n"
-
-            msg += f"📸 Галерея: {data.get('gallery_images_count', 0)} фото\n"
-
-            if car_url := data.get("car_url"):
-                msg += f"\n🔗 Ссылка на сайт:\n{car_url}\n"
-            if admin_url := data.get("admin_edit_url"):
-                msg += f"\n🛠 Редактировать в админке:\n{admin_url}\n"
-
-            if parsed_fields:
-                msg += "\n\n✔️ Распознаны поля:\n"
-                for field in parsed_fields:
-                    msg += f"• `{field}`\n"
-
-            if failed_fields:
-                msg += "\n⚠️ Не удалось распознать:\n"
-                for field in failed_fields:
-                    msg += f"• `{field}`\n"
-
-            await message.reply(msg)
-
+                await message.reply(msg)
+            except Exception as e:
+                print(f"[ERROR] Failed to parse API response: {str(e)}")
+                await message.reply(f"⚠️ Получен неожиданный ответ от сервера. Обработка может быть в процессе.")
         else:
-            logging.error("❌ Ошибка при отправке данных на API")
-            logging.info(f"[STATUS] {response.status_code}")
-            logging.info(f"[BODY] {response.text}")
+            error_msg = f"❌ Ошибка при отправке данных на сервер: {response.status_code}\n"
+            if hasattr(response, 'text'):
+                error_msg += f"Ответ: {response.text}"
+            await message.reply(error_msg)
 
-            if response.status_code >= 500:
-                await message.reply("❌ Сервер временно недоступен. Попробуйте позже.")
-            else:
-                await message.reply("❌ Не удалось отправить данные. Проверьте формат или попробуйте снова.")
+    except Exception as e:
+        print(f"[ERROR] API CONNECTION ERROR: {str(e)}")
+        await message.reply(
+            f"❌ Ошибка при подключении к серверу: {str(e)}\n\nПожалуйста, попробуйте позже или проверьте доступность сервера.")
 
-    finally:
-        user_sessions.pop(user_id, None)
+
+def format_car_data_for_human(car_data):
+    """Formats car data for human-readable display"""
+    lines = []
+
+    # Brand, model and trim
+    brand = car_data.get('brand', '—')
+    model = car_data.get('model', '—')
+    trim = car_data.get('trim', '')
+    modification = car_data.get('modification', '')
+
+    car_line = f"🚗 {brand} {model}"
+    if trim:
+        car_line += f" {trim}"
+    lines.append(car_line)
+
+    # Modification if present
+    if modification:
+        lines.append(f"📋 Модификация: {modification}")
+
+    # Engine
+    if engine := car_data.get('engine', ''):
+        lines.append(f"⚙️ Двигатель: {engine}")
+
+    # Year
+    if year := car_data.get('year', ''):
+        lines.append(f"📅 Год: {year}")
+
+    # Mileage
+    if mileage := car_data.get('mileage', ''):
+        lines.append(f"🛣 Пробег: {mileage} км")
+
+    # Price
+    if price := car_data.get('price', ''):
+        currency = car_data.get('currency', 'RUB')
+        currency_symbol = {'USD': '$', 'RUB': '₽', 'EUR': '€'}.get(currency, '')
+        lines.append(f"💰 Цена: {price} {currency_symbol}")
+
+    # Drive type
+    if drive := car_data.get('drive_type', ''):
+        lines.append(f"🔄 Привод: {drive}")
+
+    # Transmission
+    if transmission := car_data.get('transmission', ''):
+        lines.append(f"🔄 Трансмиссия: {transmission}")
+
+    return "\n".join(lines)
 
 
 app.run()
