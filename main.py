@@ -140,6 +140,11 @@ async def process_session(message: Message, session: dict):
 
         # Start async task to send data to API and handle response
         asyncio.create_task(send_api_request_and_notify(message, car_data))
+        
+        # Clear the images and caption from the session after processing
+        session["images"] = []
+        session.pop("caption", None)
+        session.pop("group_id", None)
 
     except Exception as e:
         print(f"[ERROR] Failed to process: {str(e)}")
